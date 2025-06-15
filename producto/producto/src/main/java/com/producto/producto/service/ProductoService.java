@@ -2,15 +2,14 @@ package com.producto.producto.service;
 
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Service;
 
 import com.producto.producto.model.Categoria;
+import com.producto.producto.model.EstadoProducto;
 import com.producto.producto.model.Producto;
 import com.producto.producto.repository.CategoriaRepository;
 import com.producto.producto.repository.ProductoRepository;
-import com.producto.producto.webclient.PromocionClient;
 
 import jakarta.transaction.Transactional;
 
@@ -20,17 +19,14 @@ public class ProductoService {
 
     private final ProductoRepository productoRepository;
     private final CategoriaRepository categoriaRepository;
-    private final PromocionClient promocionClient;
 
     public ProductoService(ProductoRepository productoRepository,
-                           CategoriaRepository categoriaRepository,
-                           PromocionClient promocionClient) {
+                           CategoriaRepository categoriaRepository) {
         this.productoRepository = productoRepository;
         this.categoriaRepository = categoriaRepository;
-        this.promocionClient = promocionClient;
     }
 
-    // Obtener productos con filtros opcionales
+    // Obtener productos con filtros opcionales de nombre o categoría
     public List<Producto> getProductos(String nombre, Long categoriaId) {
         if (nombre != null && categoriaId != null) {
             return productoRepository.findByNombreContainingIgnoreCaseAndCategoria_IdCategoria(nombre, categoriaId);
@@ -43,45 +39,18 @@ public class ProductoService {
         }
     }
 
-    // Obtener un producto con detalles
+    // Obtener productos filtrando solo por estado 
+    public List<Producto> getProductosPorEstado(EstadoProducto estado) {
+        return productoRepository.findByEstado(estado);
+    }
+
+    // Obtener un producto con todos sus detalles por ID
     public Producto getProductoConDetalles(Long id) {
         return productoRepository.findById(id)
             .orElseThrow(() -> new ResourceNotFoundException("Producto no encontrado con ID: " + id));
     }
 
-    public List<Producto> getProductosByIdDescuento(Long descuentoId) {
-        Map<String, Object> descuento = promocionClient.getDescuentoById(descuentoId);
-
-        if (descuento == null) {
-            throw new IllegalArgumentException("El descuento no existe");
-        }
-
-        Object productosObj = descuento.get("idProducto");
-
-        if (productosObj == null) {
-            return List.of();
-        }
-
-        List<?> productosRaw = (List<?>) productosObj;
-
-        List<Long> idProductos = productosRaw.stream()
-            .map(obj -> {
-                if (obj instanceof Number) {
-                    return ((Number) obj).longValue();
-                } else {
-                    throw new IllegalArgumentException("idProducto contiene valores no numéricos");
-                }
-            })
-            .collect(Collectors.toList());
-
-        if (idProductos.isEmpty()) {
-            return List.of();
-        }
-
-        return productoRepository.findByIdProductoIn(idProductos);
-    }
-
-    // Agregar un producto
+    // Agregar un nuevo producto (valida que la categoría exista)
     public Producto agregarProducto(Producto producto) {
         if (producto.getCategoria() == null || producto.getCategoria().getIdCategoria() == null) {
             throw new IllegalArgumentException("La categoría es obligatoria");
@@ -93,7 +62,7 @@ public class ProductoService {
         return productoRepository.save(producto);
     }
 
-    // Actualizar un producto
+    // Actualizar datos de un producto existente
     public Producto actualizarProducto(Long id, Producto productoActualizado) {
         Producto producto = productoRepository.findById(id)
             .orElseThrow(() -> new ResourceNotFoundException("Producto no encontrado con ID: " + id));
@@ -102,7 +71,7 @@ public class ProductoService {
         producto.setDescripcion(productoActualizado.getDescripcion());
         producto.setPrecioUnitario(productoActualizado.getPrecioUnitario());
         producto.setStock(productoActualizado.getStock());
-        producto.setIdEstado(productoActualizado.getIdEstado());
+        producto.setEstado(productoActualizado.getEstado()); // ← Se reemplaza el uso de idEstado
 
         if (productoActualizado.getCategoria() != null) {
             categoriaRepository.findById(productoActualizado.getCategoria().getIdCategoria())
@@ -114,17 +83,16 @@ public class ProductoService {
         return productoRepository.save(producto);
     }
 
-    // Actualizar stock individual
+    // Actualizar solo el stock de un producto
     public Producto actualizarStock(Long id, Integer cantidad) {
         Producto producto = productoRepository.findById(id)
             .orElseThrow(() -> new ResourceNotFoundException("Producto no encontrado con ID: " + id));
 
         producto.setStock(cantidad);
-
         return productoRepository.save(producto);
     }
 
-    // Actualizar stock en lote
+    // Actualizar stock en lote (varios productos al mismo tiempo)
     public void actualizarStockBulk(List<Map<String, Object>> updates) {
         for (Map<String, Object> update : updates) {
             Long idProducto = Long.valueOf(update.get("idProducto").toString());
@@ -133,7 +101,7 @@ public class ProductoService {
         }
     }
 
-    // Eliminar un producto
+    // Eliminar un producto por ID
     public void eliminarProducto(Long id) {
         if (!productoRepository.existsById(id)) {
             throw new ResourceNotFoundException("Producto no encontrado con ID: " + id);
@@ -143,12 +111,10 @@ public class ProductoService {
 
     // --- CRUD de CATEGORÍA ---
 
-    // Obtener todas las categorías
     public List<Categoria> getCategorias() {
         return categoriaRepository.findAll();
     }
 
-    // Agregar una categoría
     public Categoria agregarCategoria(Categoria categoria) {
         if (categoria.getNombre() == null || categoria.getNombre().trim().isEmpty()) {
             throw new IllegalArgumentException("El nombre de la categoría es obligatorio");
@@ -156,7 +122,6 @@ public class ProductoService {
         return categoriaRepository.save(categoria);
     }
 
-    // Actualizar una categoría
     public Categoria actualizarCategoria(Long id, Categoria categoriaActualizada) {
         Categoria categoria = categoriaRepository.findById(id)
             .orElseThrow(() -> new ResourceNotFoundException("Categoría no encontrada con ID: " + id));
@@ -166,20 +131,17 @@ public class ProductoService {
     }
 
     public void eliminarCategoria(Long id) {
-        // Validar que exista
         categoriaRepository.findById(id)
             .orElseThrow(() -> new ResourceNotFoundException("Categoría no encontrada con ID: " + id));
 
-        // Validar que no tenga productos asociados
         if (productoRepository.existsByCategoria_IdCategoria(id)) {
             throw new IllegalStateException("No se puede eliminar la categoría, ya que tiene productos asociados");
         }
 
-        // Si pasa todo, eliminar
         categoriaRepository.deleteById(id);
     }
 
-    // --- Excepción personalizada ---
+    // Excepción personalizada para recursos no encontrados
     public static class ResourceNotFoundException extends RuntimeException {
         public ResourceNotFoundException(String message) {
             super(message);

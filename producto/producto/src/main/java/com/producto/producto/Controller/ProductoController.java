@@ -17,6 +17,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.producto.producto.model.Categoria;
+import com.producto.producto.model.EstadoProducto;
 import com.producto.producto.model.Producto;
 import com.producto.producto.service.ProductoService;
 import com.producto.producto.webclient.UsuarioClient;
@@ -24,12 +25,17 @@ import com.producto.producto.webclient.UsuarioClient;
 @RestController
 @RequestMapping("/api/v1/productos")
 public class ProductoController {
+
     @Autowired
     private ProductoService productoService;
 
     @Autowired
     private UsuarioClient usuarioClient;
 
+    /**
+     * Obtener productos con filtros opcionales de nombre y categoría.
+     * Si no se entrega ningún filtro, retorna todos los productos.
+     */
     @GetMapping("/productos")
     public ResponseEntity<?> obtenerProductos(
             @RequestParam(required = false) String nombre,
@@ -51,12 +57,15 @@ public class ProductoController {
                 productoMap.put("precioUnitario", producto.getPrecioUnitario());
                 productoMap.put("stock", producto.getStock());
                 productoMap.put("idCategoria", producto.getCategoria().getIdCategoria());
-                productoMap.put("idEstado", producto.getIdEstado());
 
+                // Enum del estado actual del producto (ej. ACTIVO, INACTIVO, AGOTADO...)
+                productoMap.put("estado", producto.getEstado());
+
+                // Descripción amigable basada en si hay stock
                 if (producto.getStock() != null && producto.getStock() > 0) {
-                    productoMap.put("estado", "Disponible");
+                    productoMap.put("estadoDescripcion", "Disponible");
                 } else {
-                    productoMap.put("estado", "No disponible");
+                    productoMap.put("estadoDescripcion", "No disponible");
                 }
 
                 response.add(productoMap);
@@ -73,6 +82,9 @@ public class ProductoController {
         }
     }
 
+    /**
+     * Obtener un producto con todos sus detalles por ID.
+     */
     @GetMapping("/productos/{id}")
     public ResponseEntity<?> obtenerProductoConDetalles(@PathVariable Long id) {
         try {
@@ -86,18 +98,9 @@ public class ProductoController {
         }
     }
 
-    @GetMapping("/descuentos/{descuentoId}/productos")
-    public ResponseEntity<?> obtenerProductosPorDescuento(@PathVariable Long descuentoId) {
-        try {
-            List<Producto> productos = productoService.getProductosByIdDescuento(descuentoId);
-            return productos.isEmpty() ? ResponseEntity.noContent().build() : ResponseEntity.ok(productos);
-        } catch (IllegalArgumentException e) {
-            return errorResponse(400, e.getMessage());
-        } catch (Exception e) {
-            return errorResponse(500, "Error interno del servidor: " + e.getMessage());
-        }
-    }
-
+    /**
+     * Agregar un nuevo producto. Solo usuarios con privilegio ADMIN pueden hacerlo.
+     */
     @PostMapping("/productos")
     public ResponseEntity<?> agregarProducto(@RequestBody Producto producto, @RequestParam Long idUsuario) {
         try {
@@ -118,6 +121,9 @@ public class ProductoController {
         }
     }
 
+    /**
+     * Actualizar los datos de un producto.
+     */
     @PutMapping("/productos/{id}")
     public ResponseEntity<?> actualizarProducto(@PathVariable Long id, @RequestBody Producto producto) {
         try {
@@ -131,6 +137,9 @@ public class ProductoController {
         }
     }
 
+    /**
+     * Actualizar el stock de un producto individual.
+     */
     @PutMapping("/productos/{id}/stock")
     public ResponseEntity<?> actualizarStock(@PathVariable Long id, @RequestBody Map<String, Integer> request) {
         try {
@@ -148,6 +157,9 @@ public class ProductoController {
         }
     }
 
+    /**
+     * Actualizar el stock de varios productos a la vez.
+     */
     @PutMapping("/productos/stock/bulk")
     public ResponseEntity<?> actualizarStockBulk(@RequestBody List<Map<String, Object>> updates) {
         try {
@@ -162,6 +174,9 @@ public class ProductoController {
         }
     }
 
+    /**
+     * Eliminar un producto por su ID.
+     */
     @DeleteMapping("/productos/{id}")
     public ResponseEntity<?> eliminarProducto(@PathVariable Long id) {
         try {
@@ -176,6 +191,9 @@ public class ProductoController {
         }
     }
 
+    /**
+     * Obtener todas las categorías disponibles.
+     */
     @GetMapping("/categorias")
     public ResponseEntity<?> obtenerCategorias() {
         try {
@@ -186,6 +204,9 @@ public class ProductoController {
         }
     }
 
+    /**
+     * Crear una nueva categoría.
+     */
     @PostMapping("/categorias")
     public ResponseEntity<?> agregarCategoria(@RequestBody Categoria categoria) {
         try {
@@ -197,6 +218,9 @@ public class ProductoController {
         }
     }
 
+    /**
+     * Actualizar una categoría existente.
+     */
     @PutMapping("/categorias/{id}")
     public ResponseEntity<?> actualizarCategoria(@PathVariable Long id, @RequestBody Categoria categoria) {
         try {
@@ -210,6 +234,9 @@ public class ProductoController {
         }
     }
 
+    /**
+     * Eliminar una categoría por ID (solo si no tiene productos asociados).
+     */
     @DeleteMapping("/categorias/{id}")
     public ResponseEntity<?> eliminarCategoria(@PathVariable Long id) {
         try {
@@ -217,20 +244,41 @@ public class ProductoController {
             return ResponseEntity.ok().build();
         } catch (ProductoService.ResourceNotFoundException e) {
             return errorResponse(404, e.getMessage());
-        } catch (IllegalStateException e) {
-            return errorResponse(400, e.getMessage());
-        } catch (IllegalArgumentException e) {
+        } catch (IllegalStateException | IllegalArgumentException e) {
             return errorResponse(400, e.getMessage());
         } catch (Exception e) {
             return errorResponse(500, "Error interno del servidor: " + e.getMessage());
         }
     }
 
-    // Método utilitario para construir error response
+    /**
+     * Utilidad para construir respuestas de error uniformes.
+     */
     private ResponseEntity<Map<String, Object>> errorResponse(int status, String message) {
         Map<String, Object> error = new HashMap<>();
         error.put("message", message);
         error.put("status", status);
         return ResponseEntity.status(status).body(error);
+    }
+
+    /**
+     * Obtener productos filtrados por estado (ej: ACTIVO, AGOTADO, INACTIVO...).
+     * Ejemplo de uso: GET /api/v1/productos/estado?estado=AGOTADO
+     */
+    @GetMapping("/productos/estado")
+    public ResponseEntity<?> obtenerPorEstado(@RequestParam EstadoProducto estado) {
+        try {
+            List<Producto> productos = productoService.getProductosPorEstado(estado);
+
+            if (productos.isEmpty()) {
+                return ResponseEntity.noContent().build();
+            }
+
+            return ResponseEntity.ok(productos);
+        } catch (IllegalArgumentException e) {
+            return errorResponse(400, "Estado no válido: " + e.getMessage());
+        } catch (Exception e) {
+            return errorResponse(500, "Error interno del servidor: " + e.getMessage());
+        }
     }
 }

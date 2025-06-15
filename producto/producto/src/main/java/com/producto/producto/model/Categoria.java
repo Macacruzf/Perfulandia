@@ -10,20 +10,32 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+
 @Entity
 @Table(name = "categorias")
-@Data
-@AllArgsConstructor
-@NoArgsConstructor
+@Data // Genera automáticamente getters, setters, equals, hashCode y toString
+@AllArgsConstructor // Genera constructor con todos los atributos
+@NoArgsConstructor  // Genera constructor vacío
 public class Categoria {
 
+    /**
+     * ID único de la categoría (clave primaria, autogenerada).
+     */
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long idCategoria;
 
+    /**
+     * Nombre de la categoría (obligatorio).
+     * Ejemplos: "Tecnología", "Ropa", "Electrodomésticos".
+     */
     @Column(nullable = false)
     private String nombre;
 
+    /**
+     * Descripción opcional de la categoría.
+     * Puede incluir detalles adicionales sobre su uso o agrupación.
+     */
     @Column
     private String descripcion;
 }

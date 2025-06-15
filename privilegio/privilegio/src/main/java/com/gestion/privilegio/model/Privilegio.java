@@ -19,18 +19,18 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 public class Privilegio {
+    /** ID único del privilegio */
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long idPrivilegio;
 
+    /** Nombre del rol asociado al privilegio (como texto plano) */
     @Column(nullable = false)
-    private String nombreRol; //  "Admin", "Cliente", etc.
+    private String nombreRol;
 
-    @Column(nullable = false, length = 500)
-    private String mensaje;
-
+    /** Módulo sobre el cual se otorgan los permisos del privilegio */
     @ManyToOne
-    @JoinColumn(name = "modulo_id")
+    @JoinColumn(name = "id_modulo", nullable = false)
     private Modulo modulo;
-
+    
 }
