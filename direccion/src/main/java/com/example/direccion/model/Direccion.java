@@ -8,6 +8,8 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
 
 import lombok.Data;
@@ -26,7 +28,7 @@ public class Direccion {
     private Long idDireccion;
 
     @Column(nullable = false)
-    private Long idUser;  
+    private Long idUsuario;  
 
     @ManyToOne
     @JoinColumn(name = "idComuna", nullable = false)
@@ -36,7 +38,9 @@ public class Direccion {
     @JoinColumn(name = "id_region", referencedColumnName = "idRegion", nullable = false)
     private Region region;
 
-    @Column(nullable = false, length = 200)
+    @NotBlank(message = "La calle no puede estar vacía")
+    @Size(max = 200)
+    @Column(nullable = false)
     private String calle;
 
     @Column(length = 10)

@@ -64,7 +64,7 @@ public class SecurityConfig {
                 System.out.println("➡️ Password (hash): " + usuario.getPassword());
 
                 // 🚀 Corrección: remover "ROLE_" para que .roles() no duplique "ROLE_"
-                String rol = usuario.getRol().getNombreRol().replace("ROLE_", "");
+                String rol = usuario.getRol().getNombreRol();
 
                 return User.builder()
                     .username(usuario.getNickname())

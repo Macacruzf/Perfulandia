@@ -40,7 +40,7 @@ public class LoadDatabase {
         .orElseGet(() -> {
             Rol nuevoRol = new Rol();
             nuevoRol.setNombreRol(nombreRol);
-            return repository.save(nuevoRol); // 🔥 Aquí está el return necesario
+            return repository.save(nuevoRol); // Aquí está el return necesario
         });
 
    }

@@ -14,7 +14,7 @@ import lombok.NoArgsConstructor;
 
 @Entity
 @Table(name = "comunas")
-@Data  // 🔥 Incluye getters/setters automáticamente
+@Data  
 @AllArgsConstructor
 @NoArgsConstructor
 public class Comuna {

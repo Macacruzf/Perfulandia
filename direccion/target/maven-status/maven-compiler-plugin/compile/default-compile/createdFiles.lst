@@ -1,0 +1,16 @@
+com\example\direccion\Controller\RegionController.class
+com\example\direccion\webclient\VentaClient.class
+com\example\direccion\Repository\RegionRepository.class
+com\example\direccion\Service\ComunaService.class
+com\example\direccion\model\Direccion.class
+com\example\direccion\config\DataLoader.class
+com\example\direccion\model\Comuna.class
+com\example\direccion\Controller\DireccionController.class
+com\example\direccion\Repository\DireccionRepository.class
+com\example\direccion\Controller\ComunaController.class
+com\example\direccion\webclient\UsuarioClient.class
+com\example\direccion\Repository\ComunaRepository.class
+com\example\direccion\model\Region.class
+com\example\direccion\Service\RegionService.class
+com\example\direccion\Service\DireccionService.class
+com\example\direccion\DireccionApplication.class

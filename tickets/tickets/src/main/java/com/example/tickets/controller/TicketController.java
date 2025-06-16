@@ -2,65 +2,79 @@ package com.example.tickets.controller;
 
 import java.util.List;
 
+import com.example.direccion.model.Ticket;
+import com.example.direccion.service.TicketService;
+import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
 
-import com.example.tickets.model.Mensaje;
-import com.example.tickets.model.Ticket;
-import com.example.tickets.service.TicketService;
+import java.security.Principal;
+import java.util.List;
 
 @RestController
-@RequestMapping("/api/tickets")
+@RequestMapping("/api/v1/tickets")
 public class TicketController {
 
     @Autowired
     private TicketService ticketService;
 
-    @PostMapping
-    public Ticket crearTicket(@RequestBody Ticket ticket) {
-        return ticketService.crearTicket(ticket);
+    @GetMapping
+    public ResponseEntity<List<Ticket>> listarTickets(Principal principal) {
+        if (!esAdmin(principal)) return accesoDenegado();
+        return ResponseEntity.ok(ticketService.obtenerTodos());
     }
 
     @GetMapping("/{id}")
-    public Ticket obtenerTicket(@PathVariable Long id) {
-        return ticketService.obtenerTicketPorId(id);
+    public ResponseEntity<?> obtenerTicket(@PathVariable Long id, Principal principal) {
+        if (!esAdmin(principal)) return accesoDenegado();
+
+        try {
+            return ResponseEntity.ok(ticketService.obtenerPorId(id));
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
     }
 
-    @GetMapping
-    public List<Ticket> listarTickets() {
-        return ticketService.listarTickets();
+    @PostMapping
+    public ResponseEntity<?> crearTicket(@Valid @RequestBody Ticket ticket, Principal principal) {
+        if (!esAdmin(principal)) return accesoDenegado();
+
+        try {
+            return ResponseEntity.ok(ticketService.crear(ticket));
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
     }
 
-    @PutMapping("/{id}/estado")
-    public Ticket actualizarEstado(@PathVariable Long id, @RequestParam String estado) {
-        return ticketService.actualizarEstado(id, estado);
+    @PutMapping("/{id}")
+    public ResponseEntity<?> actualizarTicket(@PathVariable Long id, @Valid @RequestBody Ticket ticket, Principal principal) {
+        if (!esAdmin(principal)) return accesoDenegado();
+
+        try {
+            return ResponseEntity.ok(ticketService.actualizar(id, ticket));
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
     }
 
     @DeleteMapping("/{id}")
-    public void eliminarTicket(@PathVariable Long id) {
-        ticketService.eliminarTicket(id);
+    public ResponseEntity<?> eliminarTicket(@PathVariable Long id, Principal principal) {
+        if (!esAdmin(principal)) return accesoDenegado();
+
+        try {
+            ticketService.eliminar(id);
+            return ResponseEntity.ok().build();
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
     }
 
-    @PostMapping("/{id}/mensajes")
-    public Mensaje agregarMensaje(@PathVariable Long id, @RequestBody Mensaje mensaje) {
-        return ticketService.agregarMensaje(id, mensaje);
+    private boolean esAdmin(Principal principal) {
+        return principal != null && "admin".equals(principal.getName());
     }
 
-    @GetMapping("/{id}/mensajes")
-    public List<Mensaje> listarMensajesPorTicket(@PathVariable Long id) {
-        return ticketService.listarMensajesPorTicket(id);
-    }
-
-    @GetMapping("/usuario/{idUsuario}")
-    public List<Ticket> listarTicketsPorUsuario(@PathVariable Long idUsuario) {
-        return ticketService.listarTicketsPorUsuario(idUsuario);
+    private ResponseEntity<String> accesoDenegado() {
+        return ResponseEntity.status(403).body("Acceso denegado: Solo el administrador puede usar este recurso.");
     }
 }
