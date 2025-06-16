@@ -15,6 +15,7 @@ import org.springframework.security.config.Customizer;
 
 @Configuration
 @EnableWebSecurity
+@EnableMethodSecurity(prePostEnabled = true)
 public class SecurityConfig {
 
     @Bean
@@ -46,7 +47,7 @@ public class SecurityConfig {
             Usuario usuario = usuarioRepository.findByNickname(username)
                 .orElseThrow(() -> new UsernameNotFoundException("Usuario no encontrado: " + username));
 
-            String rol = usuario.getRol().getNombreRol().replace("ROLE_", "");
+            String rol = usuario.getRol().getNombreRol();
 
             return User.builder()
                     .username(usuario.getNickname())

@@ -22,5 +22,5 @@ public interface PrivilegioRepository extends JpaRepository<Privilegio, Long>{
      * @param modulo el módulo a verificar
      * @return true si el rol tiene privilegios sobre ese módulo
      */
-    boolean existsByRolAndModulo(String rol, Modulo modulo);
+    boolean existsByNombreRolAndModulo(String nombreRol, Modulo modulo);
 }

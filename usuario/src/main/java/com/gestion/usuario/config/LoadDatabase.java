@@ -22,10 +22,10 @@ public class LoadDatabase {
 
         return args -> {
             // Crear roles si no existen
-            Rol adminRol = createRoleIfNotExists("ROLE_ADMIN", rolRepository);
-            Rol clienteRol = createRoleIfNotExists("ROLE_CLIENTE", rolRepository);
-            Rol gerenteRol = createRoleIfNotExists("ROLE_GERENTE", rolRepository);
-            Rol logisticaRol = createRoleIfNotExists("ROLE_LOGISTICA", rolRepository);
+            Rol adminRol = createRoleIfNotExists("ADMIN", rolRepository);
+            Rol clienteRol = createRoleIfNotExists("CLIENTE", rolRepository);
+            Rol gerenteRol = createRoleIfNotExists("GERENTE", rolRepository);
+            Rol logisticaRol = createRoleIfNotExists("LOGISTICA", rolRepository);
 
             // Crear usuarios de prueba si no existen
             createUserIfNotExists("admin", "admin@correo.cl", "admin123", adminRol, usuarioRepository, passwordEncoder);

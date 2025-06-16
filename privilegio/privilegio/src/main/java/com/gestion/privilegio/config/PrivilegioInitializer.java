@@ -1,4 +1,3 @@
-
 package com.gestion.privilegio.config;
 
 import java.util.Arrays;
@@ -63,7 +62,7 @@ public class PrivilegioInitializer {
             Modulo modulo = moduloRepository.findByNombre(nombreModulo).orElse(null);
 
             // Si existe y no está asignado aún al rol, lo asigna
-            if (modulo != null && !privilegioRepository.existsByRolAndModulo(rol, modulo)) {
+            if (modulo != null && !privilegioRepository.existsByNombreRolAndModulo(rol, modulo)) {
                 Privilegio privilegio = new Privilegio();
                 privilegio.setNombreRol(rol);
                 privilegio.setModulo(modulo);
@@ -72,6 +71,3 @@ public class PrivilegioInitializer {
         }
     }
 }
-
-
-

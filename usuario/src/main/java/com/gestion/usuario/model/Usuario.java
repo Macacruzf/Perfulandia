@@ -1,8 +1,6 @@
 
 package com.gestion.usuario.model;
 
-
-
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
 import jakarta.persistence.Column;
@@ -24,23 +22,31 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @NoArgsConstructor
 public class Usuario {
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "usuario_id")
-    private Long idUsuario;
-
+   /**
+     * Nombre de usuario o apodo (debe ser único).
+     */
     @Column(name = "nickname", nullable = false, unique = true, length = 50)
     private String nickname;
 
+    /**
+     * Contraseña del usuario (encriptada). No se muestra en las respuestas JSON.
+     */
+    @JsonIgnore
     @Column(name = "password", nullable = false, length = 100)
     private String password;
 
+    /**
+     * Correo electrónico del usuario (debe ser único).
+     */
     @Column(name = "correo", nullable = false, unique = true, length = 100)
     private String correo;
 
+    /**
+     * Rol al que pertenece el usuario.
+     * Se usa para determinar qué acciones puede realizar en el sistema.
+     */
     @ManyToOne(fetch = FetchType.EAGER, optional = false)
     @JoinColumn(name = "rol_id", nullable = false)
-    @JsonIgnoreProperties("usuarios")
+    @JsonIgnoreProperties("usuarios") // Evita recursividad infinita al convertir a JSON
     private Rol rol;
-    
 }
