@@ -12,7 +12,7 @@ public class UsuarioClient {
     private final WebClient webClient;
 
     public UsuarioClient(WebClient.Builder webClientBuilder) {
-        this.webClient = webClientBuilder.baseUrl("http://localhost:8027/api/usuarios").build();  // URL del microservicio usuarios
+        this.webClient = webClientBuilder.baseUrl("http://localhost:8082/api/v1/usuarios").build();  // URL del microservicio usuarios
     }
 
     public Usuario obtenerPorNickname(String nickname) {

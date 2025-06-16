@@ -7,7 +7,10 @@ import org.springframework.stereotype.Service;
 import com.autenticado.autenticado.model.Usuario;
 import com.autenticado.autenticado.webclient.UsuarioClient;
 
+import jakarta.transaction.Transactional;
+
 @Service
+@Transactional
 public class AuthServiceImpl implements AuthService {
     private final UsuarioClient usuarioClient;
     private final PasswordEncoder passwordEncoder;
