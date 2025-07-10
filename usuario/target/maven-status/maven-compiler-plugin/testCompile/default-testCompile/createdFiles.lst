@@ -1,0 +1,3 @@
+com\gestion\usuario\GestionUsuarioApplicationTests.class
+com\gestion\usuario\service\UsuarioServiceImplTest.class
+com\gestion\usuario\controller\UsuarioControllerTest.class

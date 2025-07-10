@@ -1,0 +1,10 @@
+com\gestion\usuario\controller\UsuarioController.class
+com\gestion\usuario\service\UsuarioServiceImpl.class
+com\gestion\usuario\model\Rol.class
+com\gestion\usuario\service\UsuarioService.class
+com\gestion\usuario\repository\UsuarioRepository.class
+com\gestion\usuario\model\Usuario.class
+com\gestion\usuario\GestionUsuarioApplication.class
+com\gestion\usuario\config\SecurityConfig.class
+com\gestion\usuario\config\LoadDatabase.class
+com\gestion\usuario\repository\RolRepository.class
