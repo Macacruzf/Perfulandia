@@ -1,0 +1,7 @@
+com\example\tickets\service\TicketServiceTest.class
+com\example\tickets\Controller\MensajeControllerTest.class
+com\example\tickets\service\MensajeServiceTest.class
+com\example\tickets\service\MotivoServiceTest.class
+com\example\tickets\TicketsApplicationTests.class
+com\example\tickets\Controller\MotivoControllerTest.class
+com\example\tickets\Controller\TicketControllerTest.class
