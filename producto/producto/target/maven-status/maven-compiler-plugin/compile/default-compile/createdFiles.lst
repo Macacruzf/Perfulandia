@@ -1,0 +1,16 @@
+com\producto\producto\model\Producto.class
+com\producto\producto\webclient\AuthClient$1.class
+com\producto\producto\service\ProductoService.class
+com\producto\producto\model\Categoria.class
+com\producto\producto\webclient\UsuarioClient$1.class
+com\producto\producto\webclient\AuthClient.class
+com\producto\producto\webclient\VentaClient.class
+com\producto\producto\model\EstadoProducto.class
+com\producto\producto\Controller\ProductoController.class
+com\producto\producto\config\SecurityConfig.class
+com\producto\producto\config\OpenAPIConfig.class
+com\producto\producto\ProductoApplication.class
+com\producto\producto\repository\ProductoRepository.class
+com\producto\producto\service\ProductoService$ResourceNotFoundException.class
+com\producto\producto\repository\CategoriaRepository.class
+com\producto\producto\webclient\UsuarioClient.class
