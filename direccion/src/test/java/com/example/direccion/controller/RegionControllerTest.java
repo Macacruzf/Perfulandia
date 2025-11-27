@@ -1,34 +1,34 @@
 package com.example.direccion.controller;
 
-import com.example.direccion.Controller.RegionController;
-import com.example.direccion.Service.RegionService;
+import com.example.direccion.controller.RegionController;
 import com.example.direccion.model.Region;
+import com.example.direccion.service.RegionService;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import org.springframework.test.web.servlet.MvcResult;
 
-import java.security.Principal;
-import java.util.Collections;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import java.util.List;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.when;
 import static org.mockito.Mockito.doNothing;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.assertj.core.api.Assertions.assertThat;
 
 @WebMvcTest(RegionController.class)
-public class RegionControllerTest {
+class RegionControllerTest {
 
     @Autowired
     private MockMvc mockMvc;
@@ -36,82 +36,78 @@ public class RegionControllerTest {
     @MockBean
     private RegionService regionService;
 
-    @Autowired
-    private ObjectMapper objectMapper;
-
-    private Principal adminPrincipal;
+    private Region region;
 
     @BeforeEach
-    public void setup() {
-        adminPrincipal = () -> "admin";
+    void setUp() {
+        region = new Region(1L, "Región Metropolitana");
     }
 
     @Test
-    public void testListarRegiones_Success() throws Exception {
-        Mockito.when(regionService.obtenerTodas()).thenReturn(Collections.emptyList());
+    void testListarRegiones() throws Exception {
+        when(regionService.obtenerTodas()).thenReturn(List.of(region));
 
-        mockMvc.perform(get("/api/v1/regiones").principal(adminPrincipal))
+        MvcResult result = mockMvc.perform(get("/api/v1/regiones"))
                 .andExpect(status().isOk())
-                .andExpect(content().string("[]"));
+                .andReturn();
+
+        String json = result.getResponse().getContentAsString();
+        assertThat(json).contains("Lista de regiones obtenida exitosamente");
+        assertThat(json).contains("Región Metropolitana");
     }
 
     @Test
-    public void testObtenerRegion_Success() throws Exception {
-        Region region = new Region();
-        region.setIdRegion(1L);
-        region.setNombre("Valparaíso");
+    void testObtenerRegionPorId() throws Exception {
+        when(regionService.obtenerPorId(1L)).thenReturn(region);
 
-        Mockito.when(regionService.obtenerPorId(1L)).thenReturn(region);
-
-        mockMvc.perform(get("/api/v1/regiones/1").principal(adminPrincipal))
+        MvcResult result = mockMvc.perform(get("/api/v1/regiones/1"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.nombre").value("Valparaíso"));
+                .andReturn();
+
+        String json = result.getResponse().getContentAsString();
+        assertThat(json).contains("Región encontrada");
+        assertThat(json).contains("Región Metropolitana");
     }
 
     @Test
-    public void testCrearRegion_Success() throws Exception {
-        Region region = new Region();
-        region.setNombre("Metropolitana");
+    void testCrearRegion() throws Exception {
+        when(regionService.crear(any(Region.class))).thenReturn(region);
 
-        Mockito.when(regionService.crear(any(Region.class))).thenReturn(region);
+        ObjectMapper mapper = new ObjectMapper();
+        String jsonBody = mapper.writeValueAsString(region);
 
-        mockMvc.perform(post("/api/v1/regiones")
-                .principal(adminPrincipal)
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(region)))
+        MvcResult result = mockMvc.perform(post("/api/v1/regiones")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(jsonBody))
+                .andExpect(status().isCreated())
+                .andReturn();
+
+        String json = result.getResponse().getContentAsString();
+        assertThat(json).contains("Región creada exitosamente");
+    }
+
+    @Test
+    void testActualizarRegion() throws Exception {
+        when(regionService.actualizar(eq(1L), any(Region.class))).thenReturn(region);
+
+        ObjectMapper mapper = new ObjectMapper();
+        String jsonBody = mapper.writeValueAsString(region);
+
+        MvcResult result = mockMvc.perform(put("/api/v1/regiones/1")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(jsonBody))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.nombre").value("Metropolitana"));
+                .andReturn();
+
+        String json = result.getResponse().getContentAsString();
+        assertThat(json).contains("Región actualizada exitosamente");
     }
 
     @Test
-    public void testActualizarRegion_Success() throws Exception {
-        Region region = new Region();
-        region.setNombre("Actualizada");
-
-        Mockito.when(regionService.actualizar(eq(1L), any(Region.class))).thenReturn(region);
-
-        mockMvc.perform(put("/api/v1/regiones/1")
-                .principal(adminPrincipal)
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(region)))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.nombre").value("Actualizada"));
-    }
-
-    @Test
-    public void testEliminarRegion_Success() throws Exception {
+    void testEliminarRegion() throws Exception {
         doNothing().when(regionService).eliminar(1L);
 
-        mockMvc.perform(delete("/api/v1/regiones/1").principal(adminPrincipal))
-                .andExpect(status().isOk());
-    }
-
-    @Test
-    public void testAccesoDenegado() throws Exception {
-        Principal noAdmin = () -> "usuario";
-
-        mockMvc.perform(get("/api/v1/regiones").principal(noAdmin))
-                .andExpect(status().isForbidden())
-                .andExpect(content().string("Acceso denegado: Solo el administrador puede usar este recurso."));
+        mockMvc.perform(delete("/api/v1/regiones/1"))
+                .andExpect(status().isNoContent());
     }
 }

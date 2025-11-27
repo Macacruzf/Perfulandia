@@ -2,10 +2,13 @@ package com.example.gestionventas.webclient;
 
 import java.util.List;
 import java.util.Map;
-
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpStatusCode;
 import org.springframework.stereotype.Component;
 import org.springframework.web.reactive.function.client.WebClient;
+
+import reactor.core.publisher.Mono;
+
 
 @Component
 public class ProductoClient {
@@ -20,10 +23,16 @@ public class ProductoClient {
         return this.webClient.get()
                 .uri("/productos/{id}", id)
                 .retrieve()
-                .onStatus(status -> status.is4xxClientError(),
-                        response -> response.bodyToMono(String.class)
-                                .map(body -> new RuntimeException("Producto no encontrado")))
-                .bodyToMono(Map.class).block();
+                .onStatus(HttpStatusCode::is4xxClientError,
+                    response -> response.bodyToMono(String.class)
+                        .flatMap(body -> Mono.error(new RuntimeException("Producto no encontrado (ID " + id + ")")))
+                )
+                .onStatus(HttpStatusCode::is5xxServerError,
+                    response -> response.bodyToMono(String.class)
+                        .flatMap(body -> Mono.error(new RuntimeException("Error del servidor de productos al obtener el ID " + id)))
+                )
+                .bodyToMono(Map.class)
+                .block();
     }
 
     public void actualizarStock(Long productoId, Integer cantidad) {
@@ -31,10 +40,16 @@ public class ProductoClient {
                 .uri("/productos/{id}/stock", productoId)
                 .bodyValue(Map.of("cantidad", cantidad))
                 .retrieve()
-                .onStatus(status -> status.is4xxClientError(),
-                        response -> response.bodyToMono(String.class)
-                                .map(body -> new RuntimeException("Error al actualizar stock")))
-                .bodyToMono(Void.class).block();
+                .onStatus(HttpStatusCode::is4xxClientError,
+                    response -> response.bodyToMono(String.class)
+                        .flatMap(body -> Mono.error(new RuntimeException("Error al actualizar stock (producto ID " + productoId + ")")))
+                )
+                .onStatus(HttpStatusCode::is5xxServerError,
+                    response -> response.bodyToMono(String.class)
+                        .flatMap(body -> Mono.error(new RuntimeException("Error del servidor al actualizar stock")))
+                )
+                .bodyToMono(Void.class)
+                .block();
     }
 
     public void actualizarStockBulk(List<Map<String, Object>> updates) {
@@ -42,9 +57,15 @@ public class ProductoClient {
                 .uri("/productos/stock/bulk")
                 .bodyValue(updates)
                 .retrieve()
-                .onStatus(status -> status.is4xxClientError(),
-                        response -> response.bodyToMono(String.class)
-                                .map(body -> new RuntimeException("Error al actualizar stock en bloque")))
-                .bodyToMono(Void.class).block();
+                .onStatus(HttpStatusCode::is4xxClientError,
+                    response -> response.bodyToMono(String.class)
+                        .flatMap(body -> Mono.error(new RuntimeException("Error al actualizar stock en bloque (4xx)")))
+                )
+                .onStatus(HttpStatusCode::is5xxServerError,
+                    response -> response.bodyToMono(String.class)
+                        .flatMap(body -> Mono.error(new RuntimeException("Error del servidor al actualizar stock en bloque")))
+                )
+                .bodyToMono(Void.class)
+                .block();
     }
 }

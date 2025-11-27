@@ -19,39 +19,24 @@ public class ModuloService {
         this.moduloRepository = moduloRepository;
     }
 
-    /**
-     * Obtiene todos los módulos registrados.
-     * @return lista de módulos
-     */
     public List<Modulo> obtenerTodosLosModulos() {
         return moduloRepository.findAll();
     }
 
-    /**
-     * Busca un módulo por su ID.
-     * @param id ID del módulo
-     * @return módulo encontrado o null si no existe
-     */
+
     public Modulo obtenerPorId(Long id) {
         Optional<Modulo> modulo = moduloRepository.findById(id);
         return modulo.orElse(null);
     }
 
-    /**
-     * Crea un nuevo módulo.
-     * @param modulo datos del módulo a crear
-     * @return módulo creado
-     */
+    //Crea un nuevo módulo.
+ 
     public Modulo crearModulo(Modulo modulo) {
         return moduloRepository.save(modulo);
     }
 
-    /**
-     * Actualiza los datos de un módulo existente.
-     * @param id ID del módulo a actualizar
-     * @param moduloActualizado datos actualizados
-     * @return módulo actualizado o null si no existe
-     */
+    //Actualiza los datos de un módulo existente.
+ 
     public Modulo actualizarModulo(Long id, Modulo moduloActualizado) {
         Optional<Modulo> optionalModulo = moduloRepository.findById(id);
         if (optionalModulo.isPresent()) {
@@ -62,11 +47,8 @@ public class ModuloService {
         return null;
     }
 
-    /**
-     * Elimina un módulo por su ID.
-     * @param id ID del módulo a eliminar
-     * @return true si fue eliminado, false si no existe
-     */
+    // Elimina un módulo por su ID.
+
     public boolean eliminarModulo(Long id) {
         if (moduloRepository.existsById(id)) {
             moduloRepository.deleteById(id);
@@ -75,10 +57,8 @@ public class ModuloService {
         return false;
     }
 
-    /**
-     * Devuelve la lista de todos los módulos.
-     * @return lista de módulos
-     */
+    // Devuelve la lista de todos los módulos.
+
     public List<Modulo> listarModulos() {
         return moduloRepository.findAll();
     }

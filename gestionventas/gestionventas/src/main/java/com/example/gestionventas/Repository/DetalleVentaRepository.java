@@ -10,6 +10,6 @@ import com.example.gestionventas.model.DetalleVenta;
 
 @Repository
 public interface DetalleVentaRepository extends JpaRepository<DetalleVenta, Long>{
-    List<DetalleVenta> findByIdVenta(Long ventaId);
+    List<DetalleVenta> findByVenta_IdVenta(Long idVenta);
     List<DetalleVenta> findByIdProducto(Long idProducto);
 }

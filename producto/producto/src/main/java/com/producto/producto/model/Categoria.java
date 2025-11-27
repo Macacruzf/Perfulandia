@@ -1,5 +1,8 @@
 package com.producto.producto.model;
 
+import org.springframework.hateoas.RepresentationModel;
+
+import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
@@ -8,34 +11,33 @@ import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 
 
 @Entity
 @Table(name = "categorias")
-@Data // Genera automáticamente getters, setters, equals, hashCode y toString
-@AllArgsConstructor // Genera constructor con todos los atributos
-@NoArgsConstructor  // Genera constructor vacío
-public class Categoria {
+@Data
+@AllArgsConstructor
+@NoArgsConstructor
+@EqualsAndHashCode(callSuper = false)// Evita problemas con equals/hashCode de RepresentationModel
+@Schema(description = " Tipos de categorias") 
+public class Categoria extends RepresentationModel<Categoria> {
 
-    /**
-     * ID único de la categoría (clave primaria, autogenerada).
-     */
+    //ID único de la categoría (clave primaria, ID unico e irrepetible).
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Schema(description = "ID único de la categoría", example = "1")
     private Long idCategoria;
 
-    /**
-     * Nombre de la categoría (obligatorio).
-     * Ejemplos: "Tecnología", "Ropa", "Electrodomésticos".
-     */
+    //Nombre de la categoría .
     @Column(nullable = false)
+    @Schema(description = "Nombre de la categoría", example = "Aromas Dulces", required = true)
     private String nombre;
 
-    /**
-     * Descripción opcional de la categoría.
-     * Puede incluir detalles adicionales sobre su uso o agrupación.
-     */
+    //Descripción opcional de la categoría.
+    // Puede incluir detalles adicionales sobre su uso o agrupación.
     @Column
+    @Schema(description = "Descripción de la categoría", example = "Perfumes con olores dulces y florales.")
     private String descripcion;
 }

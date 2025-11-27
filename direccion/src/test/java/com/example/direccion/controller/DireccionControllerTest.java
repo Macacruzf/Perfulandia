@@ -1,41 +1,36 @@
 package com.example.direccion.controller;
 
-
-import com.example.direccion.Controller.DireccionController;
-import com.example.direccion.Service.DireccionService;
-import com.example.direccion.model.Direccion;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.test.web.servlet.MockMvc;
 
 import static org.mockito.Mockito.when;
 import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.eq;
 import static org.mockito.Mockito.doNothing;
 
-import java.security.Principal;
-import java.util.Collections;
-import java.util.List;
-
-import com.fasterxml.jackson.databind.ObjectMapper;
-
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
-import org.springframework.http.MediaType;
-import org.springframework.test.web.servlet.MockMvc;
-import org.springframework.test.web.servlet.setup.MockMvcBuilders;
-import org.springframework.web.context.WebApplicationContext;
-
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+
+import org.springframework.test.web.servlet.MvcResult;
+import org.springframework.http.MediaType;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import java.util.List;
+
+import com.example.direccion.model.Comuna;
+import com.example.direccion.model.Direccion;
+import com.example.direccion.model.Region;
+import com.example.direccion.service.DireccionService;
 
 @WebMvcTest(DireccionController.class)
-public class DireccionControllerTest {
+class DireccionControllerTest {
 
     @Autowired
     private MockMvc mockMvc;
@@ -43,107 +38,80 @@ public class DireccionControllerTest {
     @MockBean
     private DireccionService direccionService;
 
-    @Autowired
-    private ObjectMapper objectMapper;
-
-    @Autowired
-    private WebApplicationContext context;
-
-    private Principal adminPrincipal;
-    private Principal userPrincipal;
+    private Direccion direccion;
+    private Comuna comuna;
+    private Region region;
 
     @BeforeEach
-    public void setup() {
-        mockMvc = MockMvcBuilders.webAppContextSetup(context).build();
-        adminPrincipal = () -> "admin";
-        userPrincipal = () -> "usuario";
+    void setUp() {
+        region = new Region(1L, "Metropolitana");
+        comuna = new Comuna(1L, "Providencia", region);
+        direccion = new Direccion(1L, 12L, comuna, region, "Av. Providencia", "1234", "Dpto. 202", "8320000");
     }
 
     @Test
-    public void testListarTodas_Success() throws Exception {
-        when(direccionService.obtenerTodas()).thenReturn(Collections.emptyList());
+    void testListarTodas() throws Exception {
+        when(direccionService.obtenerTodas()).thenReturn(List.of(direccion));
 
-        mockMvc.perform(get("/api/v1/direcciones").principal(adminPrincipal))
-                .andExpect(status().isOk())
-                .andExpect(content().string("[]"));
+        MvcResult result = mockMvc.perform(get("/api/v1/direcciones"))
+            .andExpect(status().isOk())
+            .andReturn();
+
+        String json = result.getResponse().getContentAsString();
+        assertThat(json).contains("Lista de direcciones obtenida correctamente");
     }
 
     @Test
-    public void testObtenerPorId_Success() throws Exception {
-        Direccion direccion = new Direccion();
-        direccion.setIdDireccion(1L);
-        direccion.setCalle("Calle 1");
-
+    void testObtenerPorId() throws Exception {
         when(direccionService.obtenerPorId(1L)).thenReturn(direccion);
 
-        mockMvc.perform(get("/api/v1/direcciones/1").principal(adminPrincipal))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.calle").value("Calle 1"));
+        MvcResult result = mockMvc.perform(get("/api/v1/direcciones/1"))
+            .andExpect(status().isOk())
+            .andReturn();
+
+        String json = result.getResponse().getContentAsString();
+        assertThat(json).contains("Dirección obtenida correctamente");
     }
 
     @Test
-    public void testListarPorComuna_Success() throws Exception {
-        Direccion direccion = new Direccion();
-        direccion.setCalle("Otra Calle");
-
-        when(direccionService.obtenerPorComuna(5L)).thenReturn(List.of(direccion));
-
-        mockMvc.perform(get("/api/v1/direcciones/comuna/5").principal(adminPrincipal))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$[0].calle").value("Otra Calle"));
-    }
-
-    @Test
-    public void testCrearDireccion_Success() throws Exception {
-        Direccion direccion = new Direccion();
-        direccion.setCalle("Nueva Calle");
-
+    void testCrearDireccion() throws Exception {
         when(direccionService.crearDireccion(any(Direccion.class))).thenReturn(direccion);
 
-        mockMvc.perform(post("/api/v1/direcciones")
-                        .principal(adminPrincipal)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(direccion)))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.calle").value("Nueva Calle"));
+        ObjectMapper mapper = new ObjectMapper();
+        String direccionJson = mapper.writeValueAsString(direccion);
+
+        MvcResult result = mockMvc.perform(post("/api/v1/direcciones")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(direccionJson))
+            .andExpect(status().isCreated())
+            .andReturn();
+
+        String json = result.getResponse().getContentAsString();
+        assertThat(json).contains("Dirección creada correctamente");
     }
 
     @Test
-    public void testActualizarDireccion_Success() throws Exception {
-        Direccion direccion = new Direccion();
-        direccion.setCalle("Actualizada");
-
+    void testActualizarDireccion() throws Exception {
         when(direccionService.actualizarDireccion(eq(1L), any(Direccion.class))).thenReturn(direccion);
 
-        mockMvc.perform(put("/api/v1/direcciones/1")
-                        .principal(adminPrincipal)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(direccion)))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.calle").value("Actualizada"));
+        ObjectMapper mapper = new ObjectMapper();
+        String direccionJson = mapper.writeValueAsString(direccion);
+
+        MvcResult result = mockMvc.perform(put("/api/v1/direcciones/1")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(direccionJson))
+            .andExpect(status().isOk())
+            .andReturn();
+
+        String json = result.getResponse().getContentAsString();
+        assertThat(json).contains("Dirección actualizada correctamente");
     }
 
     @Test
-    public void testEliminarDireccion_Success() throws Exception {
+    void testEliminarDireccion() throws Exception {
         doNothing().when(direccionService).eliminarDireccion(1L);
 
-        mockMvc.perform(delete("/api/v1/direcciones/1").principal(adminPrincipal))
-                .andExpect(status().isOk());
-    }
-
-    @Test
-    public void testAccesoDenegado() throws Exception {
-        mockMvc.perform(get("/api/v1/direcciones").principal(userPrincipal))
-                .andExpect(status().isForbidden())
-                .andExpect(content().string("Acceso denegado: Solo el administrador puede usar este recurso."));
-    }
-
-    @Test
-    public void testErrorObtenerPorId() throws Exception {
-        when(direccionService.obtenerPorId(99L)).thenThrow(new RuntimeException("Error controlado"));
-
-        mockMvc.perform(get("/api/v1/direcciones/99").principal(adminPrincipal))
-                .andExpect(status().isBadRequest())
-                .andExpect(content().string("Error controlado"));
+        mockMvc.perform(delete("/api/v1/direcciones/1"))
+            .andExpect(status().isNoContent());
     }
 }

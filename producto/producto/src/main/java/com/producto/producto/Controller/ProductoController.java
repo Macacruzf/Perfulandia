@@ -1,26 +1,22 @@
 package com.producto.producto.Controller;
 
-import java.util.HashMap;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import org.springframework.hateoas.CollectionModel;
+import org.springframework.hateoas.EntityModel;
+import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.*;
+import java.security.Principal;
 import java.util.List;
 import java.util.Map;
-
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import com.producto.producto.model.Categoria;
 import com.producto.producto.model.EstadoProducto;
 import com.producto.producto.model.Producto;
 import com.producto.producto.service.ProductoService;
-import com.producto.producto.webclient.UsuarioClient;
 
 @RestController
 @RequestMapping("/api/v1/productos")
@@ -29,91 +25,68 @@ public class ProductoController {
     @Autowired
     private ProductoService productoService;
 
-    @Autowired
-    private UsuarioClient usuarioClient;
-
-    /**
-     * Obtener productos con filtros opcionales de nombre y categoría.
-     * Si no se entrega ningún filtro, retorna todos los productos.
-     */
-    @GetMapping("/productos")
-    public ResponseEntity<?> obtenerProductos(
-            @RequestParam(required = false) String nombre,
-            @RequestParam(required = false) Long categoriaId) {
+    // GET /api/v1/productos?nombre=...&categoriaId=...
+    @Operation(summary = "Obtiene productos con filtros opcionales de nombre y categoría")
+    @ApiResponses({
+        @ApiResponse(responseCode = "200", description = "Lista de productos encontrada"),
+        @ApiResponse(responseCode = "204", description = "No hay productos disponibles"),
+        @ApiResponse(responseCode = "400", description = "Parámetros inválidos"),
+        @ApiResponse(responseCode = "500", description = "Error interno del servidor")
+    })
+    @GetMapping
+    public ResponseEntity<?> obtenerProductos(@RequestParam(required = false) String nombre,
+                                              @RequestParam(required = false) Long categoriaId) {
         try {
             List<Producto> productos = productoService.getProductos(nombre, categoriaId);
+            if (productos.isEmpty()) return ResponseEntity.noContent().build();
 
-            if (productos.isEmpty()) {
-                return ResponseEntity.noContent().build();
-            }
+            List<EntityModel<Producto>> response = productos.stream()
+                .map(producto -> EntityModel.of(producto,
+                        linkTo(methodOn(ProductoController.class).obtenerProductoConDetalles(producto.getIdProducto())).withSelfRel()))
+                .toList();
 
-            List<Map<String, Object>> response = new java.util.ArrayList<>();
-
-            for (Producto producto : productos) {
-                Map<String, Object> productoMap = new java.util.HashMap<>();
-                productoMap.put("idProducto", producto.getIdProducto());
-                productoMap.put("nombre", producto.getNombre());
-                productoMap.put("descripcion", producto.getDescripcion());
-                productoMap.put("precioUnitario", producto.getPrecioUnitario());
-                productoMap.put("stock", producto.getStock());
-                productoMap.put("idCategoria", producto.getCategoria().getIdCategoria());
-
-                // Enum del estado actual del producto (ej. ACTIVO, INACTIVO, AGOTADO...)
-                productoMap.put("estado", producto.getEstado());
-
-                // Descripción amigable basada en si hay stock
-                if (producto.getStock() != null && producto.getStock() > 0) {
-                    productoMap.put("estadoDescripcion", "Disponible");
-                } else {
-                    productoMap.put("estadoDescripcion", "No disponible");
-                }
-
-                response.add(productoMap);
-            }
-
-            return ResponseEntity.ok(response);
-
-        } catch (ProductoService.ResourceNotFoundException e) {
-            return errorResponse(404, e.getMessage());
-        } catch (IllegalArgumentException e) {
-            return errorResponse(400, e.getMessage());
+            return ResponseEntity.ok(CollectionModel.of(response,
+                    linkTo(methodOn(ProductoController.class).obtenerProductos(nombre, categoriaId)).withSelfRel()));
         } catch (Exception e) {
             return errorResponse(500, "Error interno del servidor: " + e.getMessage());
         }
     }
 
-    /**
-     * Obtener un producto con todos sus detalles por ID.
-     */
-    @GetMapping("/productos/{id}")
+    // GET /api/v1/productos/{id}
+    @Operation(summary = "Obtiene un producto por su ID con detalles")
+    @ApiResponses({
+        @ApiResponse(responseCode = "200", description = "Producto encontrado"),
+        @ApiResponse(responseCode = "404", description = "Producto no encontrado"),
+        @ApiResponse(responseCode = "500", description = "Error interno del servidor")
+    })
+    @GetMapping("/{id}")
     public ResponseEntity<?> obtenerProductoConDetalles(@PathVariable Long id) {
         try {
-            return ResponseEntity.ok(productoService.getProductoConDetalles(id));
+            Producto producto = productoService.getProductoConDetalles(id);
+            return ResponseEntity.ok(EntityModel.of(producto,
+                    linkTo(methodOn(ProductoController.class).obtenerProductoConDetalles(id)).withSelfRel(),
+                    linkTo(methodOn(ProductoController.class).obtenerProductos(null, null)).withRel("productos")));
         } catch (ProductoService.ResourceNotFoundException e) {
             return errorResponse(404, e.getMessage());
-        } catch (IllegalArgumentException e) {
-            return errorResponse(400, e.getMessage());
         } catch (Exception e) {
             return errorResponse(500, "Error interno del servidor: " + e.getMessage());
         }
     }
 
-    /**
-     * Agregar un nuevo producto. Solo usuarios con privilegio ADMIN pueden hacerlo.
-     */
-    @PostMapping("/productos")
-    public ResponseEntity<?> agregarProducto(@RequestBody Producto producto, @RequestParam Long idUsuario) {
+    // POST /api/v1/productos
+    @Operation(summary = "Agrega un nuevo producto")
+    @ApiResponses({
+        @ApiResponse(responseCode = "201", description = "Producto creado exitosamente"),
+        @ApiResponse(responseCode = "400", description = "Datos inválidos"),
+        @ApiResponse(responseCode = "403", description = "Acceso denegado"),
+        @ApiResponse(responseCode = "500", description = "Error interno del servidor")
+    })
+    @PostMapping
+    public ResponseEntity<?> agregarProducto(@RequestBody Producto producto, Principal principal) {
+        if (!esAdmin(principal)) return accesoDenegado();
         try {
-            Map<String, Object> usuario = usuarioClient.getUsuarioById(idUsuario);
-            String privilegio = (String) usuario.get("privilegio");
-
-            if (!privilegio.equalsIgnoreCase("ADMIN")) {
-                return errorResponse(403, "No tienes permisos para esta operación");
-            }
-
-            return ResponseEntity.status(201).body(productoService.agregarProducto(producto));
-        } catch (ProductoService.ResourceNotFoundException e) {
-            return errorResponse(404, e.getMessage());
+            Producto nuevoProducto = productoService.agregarProducto(producto);
+            return ResponseEntity.status(201).body(nuevoProducto);
         } catch (IllegalArgumentException e) {
             return errorResponse(400, e.getMessage());
         } catch (Exception e) {
@@ -121,13 +94,21 @@ public class ProductoController {
         }
     }
 
-    /**
-     * Actualizar los datos de un producto.
-     */
-    @PutMapping("/productos/{id}")
-    public ResponseEntity<?> actualizarProducto(@PathVariable Long id, @RequestBody Producto producto) {
+    // PUT /api/v1/productos/{id}
+    @Operation(summary = "Actualiza un producto existente")
+    @ApiResponses({
+        @ApiResponse(responseCode = "200", description = "Producto actualizado"),
+        @ApiResponse(responseCode = "400", description = "Datos inválidos"),
+        @ApiResponse(responseCode = "403", description = "Acceso denegado"),
+        @ApiResponse(responseCode = "404", description = "Producto no encontrado"),
+        @ApiResponse(responseCode = "500", description = "Error interno del servidor")
+    })
+    @PutMapping("/{id}")
+    public ResponseEntity<?> actualizarProducto(@PathVariable Long id, @RequestBody Producto producto, Principal principal) {
+        if (!esAdmin(principal)) return accesoDenegado();
         try {
-            return ResponseEntity.ok(productoService.actualizarProducto(id, producto));
+            Producto actualizado = productoService.actualizarProducto(id, producto);
+            return ResponseEntity.ok(actualizado);
         } catch (ProductoService.ResourceNotFoundException e) {
             return errorResponse(404, e.getMessage());
         } catch (IllegalArgumentException e) {
@@ -137,63 +118,25 @@ public class ProductoController {
         }
     }
 
-    /**
-     * Actualizar el stock de un producto individual.
-     */
-    @PutMapping("/productos/{id}/stock")
-    public ResponseEntity<?> actualizarStock(@PathVariable Long id, @RequestBody Map<String, Integer> request) {
-        try {
-            Integer cantidad = request.get("cantidad");
-            if (cantidad == null) {
-                return errorResponse(400, "La cantidad es obligatoria");
-            }
-            return ResponseEntity.ok(productoService.actualizarStock(id, cantidad));
-        } catch (ProductoService.ResourceNotFoundException e) {
-            return errorResponse(404, e.getMessage());
-        } catch (IllegalArgumentException e) {
-            return errorResponse(400, e.getMessage());
-        } catch (Exception e) {
-            return errorResponse(500, "Error interno del servidor: " + e.getMessage());
-        }
-    }
-
-    /**
-     * Actualizar el stock de varios productos a la vez.
-     */
-    @PutMapping("/productos/stock/bulk")
-    public ResponseEntity<?> actualizarStockBulk(@RequestBody List<Map<String, Object>> updates) {
-        try {
-            productoService.actualizarStockBulk(updates);
-            return ResponseEntity.ok().build();
-        } catch (ProductoService.ResourceNotFoundException e) {
-            return errorResponse(404, e.getMessage());
-        } catch (IllegalArgumentException e) {
-            return errorResponse(400, e.getMessage());
-        } catch (Exception e) {
-            return errorResponse(500, "Error interno del servidor: " + e.getMessage());
-        }
-    }
-
-    /**
-     * Eliminar un producto por su ID.
-     */
-    @DeleteMapping("/productos/{id}")
-    public ResponseEntity<?> eliminarProducto(@PathVariable Long id) {
+    // DELETE /api/v1/productos/{id}
+    @Operation(summary = "Elimina un producto por ID")
+    @ApiResponses({
+        @ApiResponse(responseCode = "200", description = "Producto eliminado"),
+        @ApiResponse(responseCode = "403", description = "Acceso denegado"),
+        @ApiResponse(responseCode = "500", description = "Error interno del servidor")
+    })
+    @DeleteMapping("/{id}")
+    public ResponseEntity<?> eliminarProducto(@PathVariable Long id, Principal principal) {
+        if (!esAdmin(principal)) return accesoDenegado();
         try {
             productoService.eliminarProducto(id);
             return ResponseEntity.ok().build();
-        } catch (ProductoService.ResourceNotFoundException e) {
-            return errorResponse(404, e.getMessage());
-        } catch (IllegalArgumentException e) {
-            return errorResponse(400, e.getMessage());
         } catch (Exception e) {
             return errorResponse(500, "Error interno del servidor: " + e.getMessage());
         }
     }
 
-    /**
-     * Obtener todas las categorías disponibles.
-     */
+    // GET /api/v1/productos/categorias
     @GetMapping("/categorias")
     public ResponseEntity<?> obtenerCategorias() {
         try {
@@ -204,11 +147,10 @@ public class ProductoController {
         }
     }
 
-    /**
-     * Crear una nueva categoría.
-     */
+    // POST /api/v1/productos/categorias
     @PostMapping("/categorias")
-    public ResponseEntity<?> agregarCategoria(@RequestBody Categoria categoria) {
+    public ResponseEntity<?> agregarCategoria(@RequestBody Categoria categoria, Principal principal) {
+        if (!esAdmin(principal)) return accesoDenegado();
         try {
             return ResponseEntity.status(201).body(productoService.agregarCategoria(categoria));
         } catch (IllegalArgumentException e) {
@@ -218,11 +160,10 @@ public class ProductoController {
         }
     }
 
-    /**
-     * Actualizar una categoría existente.
-     */
+    // PUT /api/v1/productos/categorias/{id}
     @PutMapping("/categorias/{id}")
-    public ResponseEntity<?> actualizarCategoria(@PathVariable Long id, @RequestBody Categoria categoria) {
+    public ResponseEntity<?> actualizarCategoria(@PathVariable Long id, @RequestBody Categoria categoria, Principal principal) {
+        if (!esAdmin(principal)) return accesoDenegado();
         try {
             return ResponseEntity.ok(productoService.actualizarCategoria(id, categoria));
         } catch (ProductoService.ResourceNotFoundException e) {
@@ -234,11 +175,10 @@ public class ProductoController {
         }
     }
 
-    /**
-     * Eliminar una categoría por ID (solo si no tiene productos asociados).
-     */
+    // DELETE /api/v1/productos/categorias/{id}
     @DeleteMapping("/categorias/{id}")
-    public ResponseEntity<?> eliminarCategoria(@PathVariable Long id) {
+    public ResponseEntity<?> eliminarCategoria(@PathVariable Long id, Principal principal) {
+        if (!esAdmin(principal)) return accesoDenegado();
         try {
             productoService.eliminarCategoria(id);
             return ResponseEntity.ok().build();
@@ -251,34 +191,35 @@ public class ProductoController {
         }
     }
 
-    /**
-     * Utilidad para construir respuestas de error uniformes.
-     */
-    private ResponseEntity<Map<String, Object>> errorResponse(int status, String message) {
-        Map<String, Object> error = new HashMap<>();
-        error.put("message", message);
-        error.put("status", status);
-        return ResponseEntity.status(status).body(error);
-    }
-
-    /**
-     * Obtener productos filtrados por estado (ej: ACTIVO, AGOTADO, INACTIVO...).
-     * Ejemplo de uso: GET /api/v1/productos/estado?estado=AGOTADO
-     */
-    @GetMapping("/productos/estado")
+    // GET /api/v1/productos/estado?estado=ACTIVO
+    @GetMapping("/estado")
     public ResponseEntity<?> obtenerPorEstado(@RequestParam EstadoProducto estado) {
         try {
             List<Producto> productos = productoService.getProductosPorEstado(estado);
-
-            if (productos.isEmpty()) {
-                return ResponseEntity.noContent().build();
-            }
-
-            return ResponseEntity.ok(productos);
+            return productos.isEmpty() ? ResponseEntity.noContent().build() : ResponseEntity.ok(productos);
         } catch (IllegalArgumentException e) {
             return errorResponse(400, "Estado no válido: " + e.getMessage());
         } catch (Exception e) {
             return errorResponse(500, "Error interno del servidor: " + e.getMessage());
         }
+    }
+
+    // Validaciones reutilizables
+    private boolean esAdmin(Principal principal) {
+        return principal != null && principal.getName().equals("admin");
+    }
+
+    private ResponseEntity<Map<String, Object>> accesoDenegado() {
+        return ResponseEntity.status(403).body(Map.of(
+            "status", "error",
+            "message", "Acceso denegado: no tienes permisos suficientes"
+        ));
+    }
+
+    private ResponseEntity<Map<String, Object>> errorResponse(int status, String message) {
+        return ResponseEntity.status(status).body(Map.of(
+            "status", "error",
+            "message", message
+        ));
     }
 }

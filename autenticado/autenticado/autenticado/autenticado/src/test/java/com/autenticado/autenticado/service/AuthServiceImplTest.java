@@ -2,11 +2,11 @@ package com.autenticado.autenticado.service;
 
 import com.autenticado.autenticado.model.Usuario;
 import com.autenticado.autenticado.webclient.UsuarioClient;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
-import org.mockito.MockitoAnnotations;
+import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -15,6 +15,7 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.mockito.Mockito.when;
 
 
+@ExtendWith(MockitoExtension.class)
 public class AuthServiceImplTest {
 
     @Mock
@@ -26,67 +27,70 @@ public class AuthServiceImplTest {
     @InjectMocks
     private AuthServiceImpl authService;
 
-    private Usuario usuario;
+    // Test para buscar un usuario por su nickname
+    @Test
+    void testBuscarPorNickname() {
+        Usuario mockUsuario = new Usuario();
+        mockUsuario.setNickname("dwyer");
 
-    @BeforeEach
-    void setUp() {
-        MockitoAnnotations.openMocks(this);
-        usuario = new Usuario();
-        usuario.setNickname("cliente");
-        usuario.setPassword("claveEncriptada");
-        usuario.setCorreo("cliente@correo.cl");
+        // Simulamos que el cliente devuelve un usuario con nickname "dwyer"
+        when(usuarioClient.obtenerPorNickname("dwyer")).thenReturn(mockUsuario);
+
+        // Ejecutamos el método del servicio
+        Usuario result = authService.buscarPorNickname("dwyer");
+
+        // Verificamos que el resultado no sea null y tenga el nickname esperado
+        assertNotNull(result);
+        assertEquals("dwyer", result.getNickname());
     }
 
-    /**
-     * Prueba: debe retornar el usuario cuando se encuentra por nickname
-     */
+    // Test de autenticación exitosa: usuario existe y contraseña coincide
     @Test
-    void buscarPorNicknameDebeRetornarUsuario() {
-        when(usuarioClient.obtenerPorNickname("cliente")).thenReturn(usuario);
+    void testAutenticar_Success() {
+        Usuario mockUsuario = new Usuario();
+        mockUsuario.setNickname("dwyer");
+        mockUsuario.setPassword("encryptedPassword");
 
-        Usuario resultado = authService.buscarPorNickname("cliente");
+        // Simula obtener al usuario
+        when(usuarioClient.obtenerPorNickname("dwyer")).thenReturn(mockUsuario);
+        // Simula que la contraseña coincide
+        when(passwordEncoder.matches("123456", "encryptedPassword")).thenReturn(true);
 
-        assertNotNull(resultado);
-        assertEquals("cliente", resultado.getNickname());
+        // Ejecuta el método a probar
+        Usuario result = authService.autenticar("dwyer", "123456");
+
+        // Verifica que se devuelva el usuario correctamente autenticado
+        assertNotNull(result);
+        assertEquals("dwyer", result.getNickname());
     }
 
-    /**
-     * Prueba: debe retornar el usuario si la contraseña coincide
-     */
+    // Test de autenticación fallida: usuario no existe
     @Test
-    void autenticarContrasenaCorrectaDebeRetornarUsuario() {
-        when(usuarioClient.obtenerPorNickname("cliente")).thenReturn(usuario);
-        when(passwordEncoder.matches("clave123", "claveEncriptada")).thenReturn(true);
+    void testAutenticar_UsuarioNoExiste() {
+        // Simulamos que el usuario no existe
+        when(usuarioClient.obtenerPorNickname("dwyer")).thenReturn(null);
 
-        Usuario resultado = authService.autenticar("cliente", "clave123");
+        Usuario result = authService.autenticar("dwyer", "123456");
 
-        assertNotNull(resultado);
-        assertEquals("cliente", resultado.getNickname());
+        // Se espera null porque no existe el usuario
+        assertNull(result);
     }
 
-    /**
-     * Prueba: debe retornar null si la contraseña no coincide
-     */
+    // Test de autenticación fallida: contraseña incorrecta
     @Test
-    void autenticarContrasenaIncorrectaDebeRetornarNull() {
-        when(usuarioClient.obtenerPorNickname("cliente")).thenReturn(usuario);
-        when(passwordEncoder.matches("claveIncorrecta", "claveEncriptada")).thenReturn(false);
+    void testAutenticar_ContrasenaIncorrecta() {
+        Usuario mockUsuario = new Usuario();
+        mockUsuario.setNickname("dwyer");
+        mockUsuario.setPassword("encryptedPassword");
 
-        Usuario resultado = authService.autenticar("cliente", "claveIncorrecta");
+        when(usuarioClient.obtenerPorNickname("dwyer")).thenReturn(mockUsuario);
+        // Simulamos que la contraseña no coincide
+        when(passwordEncoder.matches("123456", "encryptedPassword")).thenReturn(false);
 
-        assertNull(resultado);
-    }
+        Usuario result = authService.autenticar("dwyer", "123456");
 
-    /**
-     * Prueba: debe retornar null si el usuario no existe
-     */
-    @Test
-    void autenticarUsuarioNoEncontradoDebeRetornarNull() {
-        when(usuarioClient.obtenerPorNickname("desconocido")).thenReturn(null);
-
-        Usuario resultado = authService.autenticar("desconocido", "cualquierClave");
-
-        assertNull(resultado);
+        // Debe devolver null por contraseña incorrecta
+        assertNull(result);
     }
 }
 

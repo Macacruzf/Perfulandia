@@ -1,12 +1,23 @@
 package com.producto.producto.model;
 
-
+import io.swagger.v3.oas.annotations.media.Schema;
 
 // Enumeración de estados posibles para un producto
+@Schema(description = "Estado actual del producto")
 public enum EstadoProducto {
-    ACTIVO,         // Producto visible y disponible para la venta
-    INACTIVO,       // Producto oculto o no disponible temporalmente
-    EN_REVISION,    // Producto pendiente de aprobación o revisión
-    AGOTADO,        // Producto sin stock disponible
-    DESCONTINUADO   // Producto fuera del catálogo permanentemente
+
+    @Schema(description = "Producto visible y disponible para la venta")
+    ACTIVO,
+
+    @Schema(description = "Producto oculto o no disponible temporalmente")
+    INACTIVO,
+
+    @Schema(description = "Producto pendiente de aprobación o revisión")
+    EN_REVISION,
+
+    @Schema(description = "Producto sin stock disponible")
+    AGOTADO,
+
+    @Schema(description = "Producto fuera del catálogo permanentemente")
+    DESCONTINUADO
 }

@@ -1,8 +1,8 @@
 package com.example.gestionventas.model;
 
-
-import java.math.BigDecimal;
 import java.time.LocalDateTime;
+
+import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
@@ -18,25 +18,29 @@ import lombok.NoArgsConstructor;
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
+@Schema(description = "Representa una venta realizada por un usuario.")
 public class Venta {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long idVenta; // Cambiado de 'id' a 'idVenta'
+    @Column(name = "id_venta")
+    @Schema(description = "ID de la venta auto-incrementable")
+    private Long idVenta;
 
-    @Column(nullable = false)
-    private Long idUsuario; // Asociado al microservicio de usuario
+    @Column(name = "id_usuario", nullable = false)
+    @Schema(description = "ID del usuario que hizo la compra")
+    private Long idUsuario;
 
-    @Column(nullable = false)
-    private Long idDireccion; // Asociado al microservicio de dirección
+    @Column(name = "id_direccion", nullable = false)
+    @Schema(description = "ID de la dirección de envío")
+    private Long idDireccion;
 
-    @Column(nullable = false)
-    private Long idEstadoEnvio; // Asociado al microservicio de estado (tabla estado_envio)
+    @Column(name = "fecha_venta", nullable = false)
+    @Schema(description = "Fecha de la venta")
+    private LocalDateTime fechaVenta;
 
-    @Column(nullable = false)
-    private LocalDateTime fechaventa; // Cambiado de 'fecha' a 'fecha_venta'
-
-    @Column(nullable = false)
-    private BigDecimal total;
+    @Column(name = "total", nullable = false, precision = 12, scale = 2)
+    @Schema(description = "Total de la venta")
+    private Integer total;
 
 }
 

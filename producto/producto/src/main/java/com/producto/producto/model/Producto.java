@@ -13,45 +13,50 @@ import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
+
+import org.springframework.hateoas.RepresentationModel;
+import io.swagger.v3.oas.annotations.media.Schema;
 
 @Entity
 @Table(name = "productos")
+@EqualsAndHashCode(callSuper = false)
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
-public class Producto {
+@Schema(description = "Entidad que representa un producto en el sistema")
+public class Producto extends RepresentationModel<Producto> {
 
-    // Identificador único del producto (clave primaria)
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "idproducto")
+    @Schema(description = "ID único del producto", example = "1")
     private Long idProducto;
 
-    // Nombre del producto (campo obligatorio)
     @Column(nullable = false)
+    @Schema(description = "Nombre del producto", example = "Yara Rose")
     private String nombre;
 
-    // Descripción opcional del producto
     @Column
+    @Schema(description = "Descripción del producto", example = "Aromasa floral con toques de rosa")
     private String descripcion;
 
-    // Precio unitario del producto (obligatorio)
     @Column(nullable = false)
+    @Schema(description = "Precio unitario del producto", example = "9999")
     private Integer precioUnitario;
 
-    // Stock disponible del producto (obligatorio)
     @Column(nullable = false)
+    @Schema(description = "Stock disponible del producto", example = "20")
     private Integer stock;
 
-    // Estado actual del producto, almacenado como texto en la base de datos
-    // Solo puede tener uno de los valores definidos en el enum EstadoProducto
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
+    @Schema(description = "Estado actual del producto", example = "ACTIVO")
     private EstadoProducto estado;
 
-    // Relación con la categoría a la que pertenece el producto (obligatorio)
     @ManyToOne
     @JoinColumn(name = "id_categoria", referencedColumnName = "idCategoria", nullable = false)
+    @Schema(description = "Categoría a la que pertenece el producto")
     private Categoria categoria;
 }

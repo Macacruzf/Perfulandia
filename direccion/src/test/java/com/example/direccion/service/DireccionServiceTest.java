@@ -15,10 +15,10 @@ import java.util.*;
 import com.example.direccion.model.Comuna;
 import com.example.direccion.model.Direccion;
 import com.example.direccion.model.Region;
+import com.example.direccion.service.DireccionService;
 import com.example.direccion.Repository.ComunaRepository;
 import com.example.direccion.Repository.DireccionRepository;
 import com.example.direccion.Repository.RegionRepository;
-import com.example.direccion.Service.DireccionService;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;

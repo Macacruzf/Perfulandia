@@ -1,105 +1,116 @@
 package com.producto.producto.Controller;
 
 
+
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.producto.producto.config.SecurityConfig;
 import com.producto.producto.model.Categoria;
 import com.producto.producto.model.EstadoProducto;
 import com.producto.producto.model.Producto;
 import com.producto.producto.service.ProductoService;
-import com.producto.producto.webclient.UsuarioClient;
-
 import org.junit.jupiter.api.Test;
+import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
+import org.springframework.security.test.context.support.WithMockUser;
+import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.request.RequestPostProcessor;
+import org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors;
 
-
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.when;
-import static org.mockito.Mockito.doNothing;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.*;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
-
+import java.security.Principal;
 import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
 
+import java.util.List;
+
+
+@ActiveProfiles("test")
 @WebMvcTest(ProductoController.class)
-public class ProductoControllerTest {
+@Import(SecurityConfig.class)
+class ProductoControllerTest {
 
     @Autowired
-    private MockMvc mockMvc; // Simula peticiones HTTP para probar el controlador
+    private MockMvc mockMvc;
 
     @MockBean
-    private ProductoService productoService; // Simula la lógica del servicio
+    private ProductoService productoService;
 
-    @MockBean
-    private UsuarioClient usuarioClient; // Simula la llamada al microservicio de usuario
+    @Autowired
+    private ObjectMapper objectMapper;
 
-    private final ObjectMapper objectMapper = new ObjectMapper(); // Convierte objetos Java en JSON y viceversa
-
-    @Test
-    public void testObtenerProductos() throws Exception {
-        // Creamos un producto simulado
-        Producto producto = new Producto();
-        producto.setIdProducto(1L);
-        producto.setNombre("Producto de prueba");
-        producto.setDescripcion("Descripción de prueba");
-        producto.setPrecioUnitario(1000);
-        producto.setStock(10);
-        producto.setEstado(EstadoProducto.ACTIVO);
-        producto.setCategoria(new Categoria(1L, "Categoría A", "Descripción"));
-
-        List<Producto> productos = Collections.singletonList(producto);
-
-        // Simulamos el resultado del servicio
-        when(productoService.getProductos(null, null)).thenReturn(productos);
-
-        // Realizamos la petición GET y esperamos una respuesta 200 OK
-        mockMvc.perform(get("/api/v1/productos/productos"))
-            .andExpect(status().isOk())
-            .andExpect(jsonPath("$[0].nombre").value("Producto de prueba"));
+    private RequestPostProcessor adminAuth() {
+        return SecurityMockMvcRequestPostProcessors.httpBasic("admin", "admin");
     }
 
     @Test
-    public void testAgregarProducto_AdminTienePermiso() throws Exception {
-        // Creamos un producto nuevo
-        Producto producto = new Producto();
-        producto.setNombre("Producto nuevo");
-        producto.setDescripcion("Nuevo producto");
-        producto.setPrecioUnitario(1500);
-        producto.setStock(5);
-        producto.setEstado(EstadoProducto.ACTIVO);
-        producto.setCategoria(new Categoria(1L, "Categoría A", "Descripción"));
+    void agregarProductoComoAdmin_deberiaCrear() throws Exception {
+        Producto producto = new Producto(1L, "Perfume X", "Aroma cítrico", 15000, 10, EstadoProducto.ACTIVO, new Categoria());
 
-        // Simulamos que el usuario tiene rol ADMIN
-        Map<String, Object> usuario = new HashMap<>();
-        usuario.put("privilegio", "ADMIN");
-
-        when(usuarioClient.getUsuarioById(1L)).thenReturn(usuario);
         when(productoService.agregarProducto(any(Producto.class))).thenReturn(producto);
 
-        // Realizamos una petición POST con el objeto convertido a JSON
-        mockMvc.perform(post("/api/v1/productos/productos?idUsuario=1")
+        mockMvc.perform(post("/api/v1/productos")
+                .with(adminAuth())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(producto)))
-            .andExpect(status().isCreated()) // Esperamos 201 CREATED
-            .andExpect(jsonPath("$.nombre").value("Producto nuevo"));
+            .andExpect(status().isCreated())
+            .andExpect(jsonPath("$.nombre").value("Perfume X"));
     }
 
     @Test
-    public void testEliminarProducto_ProductoExiste() throws Exception {
-        // No necesitamos simular nada porque eliminarProducto no retorna nada
+    @WithMockUser // Usuario autenticado pero sin rol ADMIN
+    void agregarProductoComoNoAdmin_deberiaDenegar() throws Exception {
+        Producto producto = new Producto(1L, "Perfume Básico", "Aroma suave", 8000, 10, EstadoProducto.ACTIVO, new Categoria());
 
-        // Llamada sin errores
+        mockMvc.perform(post("/api/v1/productos")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(producto)))
+            .andExpect(status().isForbidden()); // Ahora correctamente espera 403
+    }
+    @Test
+    @WithMockUser
+    void obtenerProductoPorId_existente_deberiaRetornarProducto() throws Exception {
+        Producto producto = new Producto(1L, "Perfume A", "Aroma fresco", 9000, 5, EstadoProducto.ACTIVO, new Categoria());
+        when(productoService.getProductoConDetalles(1L)).thenReturn(producto);
+
+        mockMvc.perform(get("/api/v1/productos/1"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.nombre").value("Perfume A"));
+    }
+
+    @Test
+    void actualizarProductoComoAdmin_deberiaActualizar() throws Exception {
+        Producto producto = new Producto(1L, "Perfume Editado", "Actualizado", 18000, 8, EstadoProducto.ACTIVO, new Categoria());
+
+        when(productoService.actualizarProducto(eq(1L), any(Producto.class))).thenReturn(producto);
+
+        mockMvc.perform(put("/api/v1/productos/1")
+                .with(adminAuth())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(producto)))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.nombre").value("Perfume Editado"));
+    }
+
+    @Test
+    void eliminarProductoComoAdmin_deberiaEliminar() throws Exception {
         doNothing().when(productoService).eliminarProducto(1L);
 
-        // Realizamos una petición DELETE y esperamos una respuesta 200 OK
-        mockMvc.perform(delete("/api/v1/productos/productos/1"))
+        mockMvc.perform(delete("/api/v1/productos/1")
+                .with(adminAuth()))
             .andExpect(status().isOk());
     }
 }

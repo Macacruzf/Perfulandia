@@ -1,26 +1,26 @@
 package com.autenticado.autenticado.model;
 
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
-import jakarta.persistence.Table;
+
+import org.springframework.hateoas.RepresentationModel;
+import org.springframework.hateoas.server.core.Relation;
+
+import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.AllArgsConstructor;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 
-@Entity
-@Table(name = "rol")
 @Data
-@AllArgsConstructor
 @NoArgsConstructor
-public class Rol {
-   @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "id_rol")
-    private Long idRol;
+@AllArgsConstructor
+@EqualsAndHashCode(callSuper = true) // para no tener problemas 
+@Relation(itemRelation = "rol", collectionRelation = "roles") // Para colecciones HATEOAS
+@Schema(description = "Representa un rol asignado a un usuario en el sistema")
+public class Rol extends RepresentationModel<Rol> {
 
-    @Column(nullable = false, length = 50)
+    @Schema(description = "Identificador único del rol", example = "1")
+    private Long id;
+
+    @Schema(description = "Nombre del rol", example = "ADMIN")
     private String nombreRol;
 }

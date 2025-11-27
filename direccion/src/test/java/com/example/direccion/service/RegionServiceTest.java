@@ -1,8 +1,9 @@
 package com.example.direccion.service;
 
 import com.example.direccion.Repository.RegionRepository;
-import com.example.direccion.Service.RegionService;
 import com.example.direccion.model.Region;
+import com.example.direccion.service.RegionService;
+
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;

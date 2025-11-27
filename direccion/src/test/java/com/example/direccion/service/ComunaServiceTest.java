@@ -7,9 +7,9 @@ import org.mockito.MockitoAnnotations;
 
 import com.example.direccion.Repository.ComunaRepository;
 import com.example.direccion.Repository.RegionRepository;
-import com.example.direccion.Service.ComunaService;
 import com.example.direccion.model.Comuna;
 import com.example.direccion.model.Region;
+import com.example.direccion.service.ComunaService;
 
 import java.util.Optional;
 import java.util.List;

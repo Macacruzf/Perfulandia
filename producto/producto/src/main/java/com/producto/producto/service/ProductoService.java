@@ -11,6 +11,7 @@ import com.producto.producto.model.Producto;
 import com.producto.producto.repository.CategoriaRepository;
 import com.producto.producto.repository.ProductoRepository;
 
+
 import jakarta.transaction.Transactional;
 
 @Service
@@ -55,9 +56,10 @@ public class ProductoService {
         if (producto.getCategoria() == null || producto.getCategoria().getIdCategoria() == null) {
             throw new IllegalArgumentException("La categoría es obligatoria");
         }
-
-        categoriaRepository.findById(producto.getCategoria().getIdCategoria())
+        Categoria categoria = categoriaRepository.findById(producto.getCategoria().getIdCategoria())
             .orElseThrow(() -> new ResourceNotFoundException("Categoría no encontrada"));
+
+        producto.setCategoria(categoria);
 
         return productoRepository.save(producto);
     }
@@ -71,13 +73,13 @@ public class ProductoService {
         producto.setDescripcion(productoActualizado.getDescripcion());
         producto.setPrecioUnitario(productoActualizado.getPrecioUnitario());
         producto.setStock(productoActualizado.getStock());
-        producto.setEstado(productoActualizado.getEstado()); // ← Se reemplaza el uso de idEstado
+        producto.setEstado(productoActualizado.getEstado());
 
         if (productoActualizado.getCategoria() != null) {
-            categoriaRepository.findById(productoActualizado.getCategoria().getIdCategoria())
+            Categoria categoria = categoriaRepository.findById(productoActualizado.getCategoria().getIdCategoria())
                 .orElseThrow(() -> new ResourceNotFoundException("Categoría no encontrada"));
 
-            producto.setCategoria(productoActualizado.getCategoria());
+            producto.setCategoria(categoria);
         }
 
         return productoRepository.save(producto);
@@ -147,4 +149,5 @@ public class ProductoService {
             super(message);
         }
     }
+
 }

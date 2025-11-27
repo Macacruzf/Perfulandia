@@ -3,116 +3,107 @@ package com.gestion.privilegio.controller;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.doNothing;
 
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.times;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
-import java.util.Arrays;
+
 import java.util.List;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.gestion.privilegio.config.SecurityConfig;
 import com.gestion.privilegio.model.Modulo;
 import com.gestion.privilegio.model.Privilegio;
 import com.gestion.privilegio.service.ModuloService;
 import com.gestion.privilegio.service.PrivilegioService;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
+import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 
-
 @WebMvcTest(PrivilegioController.class)
-public class PrivilegioControllerTest {
+@ActiveProfiles("test")
+@Import(SecurityConfig.class)
+class PrivilegioControllerTest {
 
     @Autowired
     private MockMvc mockMvc;
 
-    // Creamos mocks de los servicios que usa el controlador
     @MockBean
     private PrivilegioService privilegioService;
 
     @MockBean
     private ModuloService moduloService;
 
-    private Privilegio privilegio;
-    private Modulo modulo;
-
-    @BeforeEach
-    void setUp() {
-        modulo = new Modulo();
-        modulo.setIdModulo(1L);
-        modulo.setNombre("productos");
-
-        privilegio = new Privilegio();
-        privilegio.setIdPrivilegio(1L);
-        privilegio.setNombreRol("CLIENTE");
-        privilegio.setModulo(modulo);
-    }
+    @Autowired
+    private ObjectMapper objectMapper;
 
     @Test
     void testListarPrivilegios() throws Exception {
-        List<Privilegio> lista = Arrays.asList(privilegio);
-
-        when(privilegioService.listarTodos()).thenReturn(lista);
+        Privilegio p = new Privilegio(1L, "ADMIN", new Modulo(1L, "Usuarios"));
+        when(privilegioService.listarTodos()).thenReturn(List.of(p));
 
         mockMvc.perform(get("/api/v1/privilegios"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.size()").value(1));
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("_embedded").exists());
     }
 
     @Test
     void testListarModulos() throws Exception {
-        List<Modulo> modulos = Arrays.asList(modulo);
-
-        when(moduloService.obtenerTodosLosModulos()).thenReturn(modulos);
+        Modulo m = new Modulo(1L, "Usuarios");
+        when(moduloService.obtenerTodosLosModulos()).thenReturn(List.of(m));
 
         mockMvc.perform(get("/api/v1/privilegios/modulos"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.size()").value(1));
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("_embedded").exists());
     }
 
     @Test
-    void testObtenerModulosPorRol() throws Exception {
-        when(privilegioService.obtenerModulosPorRol("CLIENTE"))
-                .thenReturn(Arrays.asList(modulo));
+    void testObtenerModulosPorRolConResultado() throws Exception {
+        Modulo m = new Modulo(2L, "Ventas");
+        when(privilegioService.obtenerModulosPorRol("ADMIN")).thenReturn(List.of(m));
 
-        mockMvc.perform(get("/api/v1/privilegios/rol/CLIENTE"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.size()").value(1));
+        mockMvc.perform(get("/api/v1/privilegios/rol/ADMIN"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$[0].nombre").value("Ventas"));
+    }
+
+    @Test
+    void testObtenerModulosPorRolSinResultado() throws Exception {
+        when(privilegioService.obtenerModulosPorRol("VACIO")).thenReturn(List.of());
+
+        mockMvc.perform(get("/api/v1/privilegios/rol/VACIO"))
+            .andExpect(status().isNoContent());
     }
 
     @Test
     void testGuardarPrivilegio() throws Exception {
-        when(privilegioService.guardar(any(Privilegio.class))).thenReturn(privilegio);
+        Modulo modulo = new Modulo(1L, "Usuarios");
+        Privilegio privilegio = new Privilegio(1L, "ADMIN", modulo);
+
+        when(privilegioService.guardar(any())).thenReturn(privilegio);
 
         mockMvc.perform(post("/api/v1/privilegios")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                                {
-                                    "nombreRol": "CLIENTE",
-                                    "modulo": {
-                                        "idModulo": 1,
-                                        "nombre": "productos"
-                                    }
-                                }
-                                """))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.nombreRol").value("CLIENTE"));
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(privilegio)))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.nombreRol").value("ADMIN"));
     }
 
     @Test
     void testEliminarPrivilegio() throws Exception {
-        mockMvc.perform(delete("/api/v1/privilegios/1"))
-                .andExpect(status().isNoContent());
+        doNothing().when(privilegioService).eliminar(1L);
 
-        verify(privilegioService, times(1)).eliminar(1L);
+        mockMvc.perform(delete("/api/v1/privilegios/1"))
+            .andExpect(status().isNoContent());
     }
 }

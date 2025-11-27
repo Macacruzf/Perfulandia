@@ -1,30 +1,27 @@
 package com.example.direccion.controller;
 
-import com.example.direccion.Controller.ComunaController;
-import com.example.direccion.Service.ComunaService;
 import com.example.direccion.model.Comuna;
+import com.example.direccion.model.Region;
+import com.example.direccion.service.ComunaService;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
-
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 
-import java.security.Principal;
-import java.util.Collections;
-
+import java.util.Arrays;
+import java.util.List;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
-import static org.mockito.Mockito.any;
-import static org.mockito.Mockito.eq;
 import static org.mockito.Mockito.doNothing;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+import static org.hamcrest.Matchers.hasSize;
 
-@WebMvcTest(controllers = ComunaController.class)
+@WebMvcTest(ComunaController.class)
 public class ComunaControllerTest {
 
     @Autowired
@@ -36,79 +33,69 @@ public class ComunaControllerTest {
     @Autowired
     private ObjectMapper objectMapper;
 
-    private Principal adminPrincipal;
-    private Principal userPrincipal;
-
-    @BeforeEach
-    void setup() {
-        adminPrincipal = () -> "admin";
-        userPrincipal = () -> "user";
-    }
+    private final Region region = new Region(1L, "Región Metropolitana");
 
     @Test
-    void testListarComunas_Admin() throws Exception {
-        when(comunaService.obtenerTodas()).thenReturn(Collections.emptyList());
+    public void testListarComunas() throws Exception {
+        List<Comuna> comunas = Arrays.asList(
+                new Comuna(1L, "Santiago", region),
+                new Comuna(2L, "Providencia", region)
+        );
 
-        mockMvc.perform(get("/api/v1/comunas").principal(adminPrincipal))
+        when(comunaService.obtenerTodas()).thenReturn(comunas);
+
+        mockMvc.perform(get("/api/v1/comunas"))
                 .andExpect(status().isOk())
-                .andExpect(content().string("[]"));
+                .andExpect(jsonPath("$.mensaje").value("Lista de comunas obtenida correctamente"))
+                .andExpect(jsonPath("$.data", hasSize(2)));
     }
 
     @Test
-    void testListarComunas_NoAdmin() throws Exception {
-        mockMvc.perform(get("/api/v1/comunas").principal(userPrincipal))
-                .andExpect(status().isForbidden())
-                .andExpect(content().string("Acceso denegado: Solo el administrador puede usar este recurso."));
-    }
-
-    @Test
-    void testObtenerComunaPorId() throws Exception {
-        Comuna comuna = new Comuna();
-        comuna.setIdComuna(1L);
-        comuna.setNombre("Prueba");
-
+    public void testObtenerComunaPorId() throws Exception {
+        Comuna comuna = new Comuna(1L, "Santiago", region);
         when(comunaService.obtenerPorId(1L)).thenReturn(comuna);
 
-        mockMvc.perform(get("/api/v1/comunas/1").principal(adminPrincipal))
+        mockMvc.perform(get("/api/v1/comunas/1"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.nombre").value("Prueba"));
+                .andExpect(jsonPath("$.mensaje").value("Comuna obtenida correctamente"))
+                .andExpect(jsonPath("$.data").exists());
     }
 
     @Test
-    void testCrearComuna() throws Exception {
-        Comuna comuna = new Comuna();
-        comuna.setNombre("Nueva Comuna");
+    public void testCrearComuna() throws Exception {
+        Comuna comuna = new Comuna(null, "Ñuñoa", region);
+        Comuna creada = new Comuna(3L, "Ñuñoa", region);
 
-        when(comunaService.crear(any(Comuna.class))).thenReturn(comuna);
+        when(comunaService.crear(any(Comuna.class))).thenReturn(creada);
 
         mockMvc.perform(post("/api/v1/comunas")
-                .principal(adminPrincipal)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(comuna)))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.nombre").value("Nueva Comuna"));
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.mensaje").value("Comuna creada correctamente"))
+                .andExpect(jsonPath("$.data").exists());
     }
 
     @Test
-    void testActualizarComuna() throws Exception {
-        Comuna comuna = new Comuna();
-        comuna.setNombre("Comuna Actualizada");
+    public void testActualizarComuna() throws Exception {
+        Comuna actualizada = new Comuna(1L, "Las Condes", region);
 
-        when(comunaService.actualizar(eq(1L), any(Comuna.class))).thenReturn(comuna);
+        when(comunaService.actualizar(eq(1L), any(Comuna.class))).thenReturn(actualizada);
 
         mockMvc.perform(put("/api/v1/comunas/1")
-                .principal(adminPrincipal)
                 .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(comuna)))
+                .content(objectMapper.writeValueAsString(actualizada)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.nombre").value("Comuna Actualizada"));
+                .andExpect(jsonPath("$.mensaje").value("Comuna actualizada correctamente"))
+                .andExpect(jsonPath("$.data").exists());
     }
 
     @Test
-    void testEliminarComuna() throws Exception {
+    public void testEliminarComuna() throws Exception {
         doNothing().when(comunaService).eliminar(1L);
 
-        mockMvc.perform(delete("/api/v1/comunas/1").principal(adminPrincipal))
-                .andExpect(status().isOk());
+        mockMvc.perform(delete("/api/v1/comunas/1"))
+                .andExpect(status().isNoContent());
     }
 }
+

@@ -1,0 +1,16 @@
+C:\Users\macac\Desktop\Perfulandia\tickets\tickets\src\main\java\com\example\tickets\config\OpenApiConfig.java
+C:\Users\macac\Desktop\Perfulandia\tickets\tickets\src\main\java\com\example\tickets\config\SecurityConfig.java
+C:\Users\macac\Desktop\Perfulandia\tickets\tickets\src\main\java\com\example\tickets\controller\MensajeController.java
+C:\Users\macac\Desktop\Perfulandia\tickets\tickets\src\main\java\com\example\tickets\controller\MotivoController.java
+C:\Users\macac\Desktop\Perfulandia\tickets\tickets\src\main\java\com\example\tickets\controller\TicketController.java
+C:\Users\macac\Desktop\Perfulandia\tickets\tickets\src\main\java\com\example\tickets\model\Mensaje.java
+C:\Users\macac\Desktop\Perfulandia\tickets\tickets\src\main\java\com\example\tickets\model\Motivo.java
+C:\Users\macac\Desktop\Perfulandia\tickets\tickets\src\main\java\com\example\tickets\model\Ticket.java
+C:\Users\macac\Desktop\Perfulandia\tickets\tickets\src\main\java\com\example\tickets\repository\MensajeRepository.java
+C:\Users\macac\Desktop\Perfulandia\tickets\tickets\src\main\java\com\example\tickets\repository\MotivoRepository.java
+C:\Users\macac\Desktop\Perfulandia\tickets\tickets\src\main\java\com\example\tickets\repository\TicketRepository.java
+C:\Users\macac\Desktop\Perfulandia\tickets\tickets\src\main\java\com\example\tickets\service\MensajeService.java
+C:\Users\macac\Desktop\Perfulandia\tickets\tickets\src\main\java\com\example\tickets\service\MotivoService.java
+C:\Users\macac\Desktop\Perfulandia\tickets\tickets\src\main\java\com\example\tickets\service\TicketService.java
+C:\Users\macac\Desktop\Perfulandia\tickets\tickets\src\main\java\com\example\tickets\TicketsApplication.java
+C:\Users\macac\Desktop\Perfulandia\tickets\tickets\src\main\java\com\example\tickets\webclient\UsuarioClient.java

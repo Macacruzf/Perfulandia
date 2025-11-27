@@ -1,96 +1,118 @@
 package com.autenticado.autenticado.controller;
 
+import com.autenticado.autenticado.config.JwtUtil;
 import com.autenticado.autenticado.model.Usuario;
+import com.autenticado.autenticado.model.Rol;
 import com.autenticado.autenticado.service.AuthService;
-import org.junit.jupiter.api.BeforeEach;
+import com.autenticado.autenticado.webclient.UsuarioClient;
+
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.security.test.context.support.WithMockUser;
+
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
-import org.springframework.test.web.servlet.result.MockMvcResultMatchers;
+
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 
 import static org.mockito.Mockito.when;
 
 @WebMvcTest(AuthController.class)
-@AutoConfigureMockMvc(addFilters = false) // Desactiva los filtros de Spring Security para esta prueba
-public class AuthControllerTest {
+@AutoConfigureMockMvc(addFilters = false) // Desactiva filtros como el JwtFilter para pruebas más simples
+class AuthControllerTest {
 
     @Autowired
     private MockMvc mockMvc;
 
+    // Se mockean las dependencias usadas dentro del AuthController
     @MockBean
     private AuthService authService;
 
     @MockBean
     private PasswordEncoder passwordEncoder;
 
-    private Usuario usuario;
+    @MockBean
+    private UsuarioClient usuarioClient;
 
-    @BeforeEach
-    void setUp() {
-        // Se crea un usuario ficticio para pruebas
-        usuario = new Usuario();
-        usuario.setNickname("cliente");
-        usuario.setPassword("claveEncriptada");
-        usuario.setCorreo("cliente@correo.cl");
-    }
+    @MockBean
+    private JwtUtil jwtUtil;
 
-    /**
-     * Prueba: login exitoso debe retornar 200 y datos del usuario sin contraseña
-     */
+    // 🧪 Test exitoso de login
     @Test
-    void loginExitosoDebeRetornarUsuario() throws Exception {
-        when(authService.buscarPorNickname("cliente")).thenReturn(usuario);
-        when(passwordEncoder.matches("clave123", "claveEncriptada")).thenReturn(true);
+    void loginSuccess() throws Exception {
+        // Se crea un usuario mock con datos simulados
+        Usuario mockUsuario = new Usuario();
+        mockUsuario.setNickname("dwyer");
+        mockUsuario.setPassword("encryptedPassword");
+        mockUsuario.setCorreo("dwyer@correo.com");
+        mockUsuario.setRol(new Rol(2L, "CLIENTE"));
 
-        mockMvc.perform(MockMvcRequestBuilders.post("/api/v1/auth/login")
-                        .param("nickname", "cliente")
-                        .param("password", "clave123"))
-                .andExpect(MockMvcResultMatchers.status().isOk())
-                .andExpect(MockMvcResultMatchers.jsonPath("$.nickname").value("cliente"));
+        // Simulamos que el servicio devuelve ese usuario
+        when(authService.buscarPorNickname("dwyer")).thenReturn(mockUsuario);
+        when(passwordEncoder.matches("123456", "encryptedPassword")).thenReturn(true);
+        when(jwtUtil.generateToken("dwyer")).thenReturn("fakeToken");
+
+        // Simulamos una petición POST al endpoint /login
+        mockMvc.perform(post("/api/v1/auth/login")
+                        .param("nickname", "dwyer")
+                        .param("password", "123456"))
+                .andExpect(status().isOk()) // Esperamos un 200 OK
+                .andExpect(jsonPath("$.token").value("fakeToken")) // Validamos el token retornado
+                .andExpect(jsonPath("$.usuario.nickname").value("dwyer")); // Validamos los datos del usuario
     }
 
-    /**
-     * Prueba: cuando el usuario no existe debe retornar 401 Unauthorized
-     */
+    // 🧪 Test cuando el usuario no es encontrado
     @Test
-    void loginUsuarioNoEncontradoDebeRetornar401() throws Exception {
-        when(authService.buscarPorNickname("inexistente")).thenReturn(null);
+    void loginUserNotFound() throws Exception {
+        // Simulamos que no se encontró el usuario
+        when(authService.buscarPorNickname("dwyer")).thenReturn(null);
 
-        mockMvc.perform(MockMvcRequestBuilders.post("/api/v1/auth/login")
-                        .param("nickname", "inexistente")
-                        .param("password", "clave123"))
-                .andExpect(MockMvcResultMatchers.status().isUnauthorized());
+        // Hacemos la solicitud con nickname inexistente
+        mockMvc.perform(post("/api/v1/auth/login")
+                        .param("nickname", "dwyer")
+                        .param("password", "123456"))
+                .andExpect(status().isUnauthorized()) // Esperamos un 401
+                .andExpect(content().string("Usuario no encontrado")); // Y el mensaje de error correspondiente
     }
 
-    /**
-     * Prueba: si la contraseña no coincide debe retornar 401 Unauthorized
-     */
+    // 🧪 Test cuando la contraseña es incorrecta
     @Test
-    void loginContrasenaIncorrectaDebeRetornar401() throws Exception {
-        when(authService.buscarPorNickname("cliente")).thenReturn(usuario);
-        when(passwordEncoder.matches("claveIncorrecta", "claveEncriptada")).thenReturn(false);
+    void loginWrongPassword() throws Exception {
+        // Creamos el usuario pero la contraseña no coincide
+        Usuario mockUsuario = new Usuario();
+        mockUsuario.setNickname("dwyer");
+        mockUsuario.setPassword("encryptedPassword");
 
-        mockMvc.perform(MockMvcRequestBuilders.post("/api/v1/auth/login")
-                        .param("nickname", "cliente")
-                        .param("password", "claveIncorrecta"))
-                .andExpect(MockMvcResultMatchers.status().isUnauthorized());
+        when(authService.buscarPorNickname("dwyer")).thenReturn(mockUsuario);
+        when(passwordEncoder.matches("123456", "encryptedPassword")).thenReturn(false);
+
+        mockMvc.perform(post("/api/v1/auth/login")
+                        .param("nickname", "dwyer")
+                        .param("password", "123456"))
+                .andExpect(status().isUnauthorized()) // 401 por contraseña incorrecta
+                .andExpect(content().string("Contraseña incorrecta"));
     }
 
-    /**
-     * Prueba: si accedemos a /test con usuario autenticado, debe retornar mensaje de éxito
-     */
+    // 🧪 Test del endpoint /test (solo para validar respuesta sencilla)
     @Test
-    @WithMockUser
-    void testAuthEndpointDebeRetornarMensaje() throws Exception {
-        mockMvc.perform(MockMvcRequestBuilders.get("/api/v1/auth/test"))
-                .andExpect(MockMvcResultMatchers.status().isOk())
-                .andExpect(MockMvcResultMatchers.content().string("Hello Authenticated!"));
+    void testAuthEndpoint() throws Exception {
+        mockMvc.perform(get("/api/v1/auth/test"))
+                .andExpect(status().isOk()) // 200 OK
+                .andExpect(content().string("Hola usted ha entrado correctamente")); // Mensaje esperado
     }
+
+    // 🧪 Test del endpoint /me con Principal mockeado
+    @Test
+    void obtenerMiPerfil() throws Exception {
+        mockMvc.perform(get("/api/v1/auth/me")
+                        .principal(() -> "dwyer"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.message").value("Inicio de sesión correcto"));
+    }          
 }
-

@@ -15,7 +15,7 @@ public class UsuarioClient {
 
     public Map<String, Object> getUsuarioById(Long id) {
         return this.webClient.get()
-                .uri("/usuarios/{id}", id)
+                .uri("/id/{id}", id)
                 .retrieve()
                 .onStatus(status -> status.is4xxClientError(),
                         response -> response.bodyToMono(String.class)

@@ -1,40 +1,32 @@
 package com.autenticado.autenticado.model;
 
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.ManyToOne;
-import jakarta.persistence.Table;
+import org.springframework.hateoas.RepresentationModel;
+
+import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.AllArgsConstructor;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 
 @Data
-@Entity
-@Table(name = "usuario")
-@AllArgsConstructor
 @NoArgsConstructor
+@AllArgsConstructor
+@EqualsAndHashCode(callSuper = true)
+@Schema(description = "Modelo de usuario con soporte HATEOAS")
+public class Usuario extends RepresentationModel<Usuario> {
 
-public class Usuario {
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "id_usuario")
+    @Schema(description = "ID del usuario", example = "5")
     private Long idUsuario;
 
-    @Column(nullable = false, unique = true, length = 50)
+    @Schema(description = "Nombre de usuario (nickname)", example = "dwyer")
     private String nickname;
 
-    @Column(nullable = false)
-    private String password;
-
-    @Column(nullable = false, unique = true, length = 100)
+    @Schema(description = "Correo del usuario", example = "dwyer@correo.com")
     private String correo;
 
-    @ManyToOne
-    @JoinColumn(name = "id_rol", nullable = false)
-    private Rol rol;
+    @Schema(description = "Contraseña encriptada del usuario", example = "$2a$10...")
+    private String password;
 
+    @Schema(description = "Rol del usuario")
+    private Rol rol;
 }

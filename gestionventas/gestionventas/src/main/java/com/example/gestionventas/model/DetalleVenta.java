@@ -1,7 +1,6 @@
 package com.example.gestionventas.model;
 
-import java.math.BigDecimal;
-
+import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
@@ -19,24 +18,33 @@ import lombok.NoArgsConstructor;
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
+@Schema(description = "Representa el detalle de una venta: producto, cantidad, subtotal y venta asociada.")
 public class DetalleVenta {
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long idDetalle; // Cambiado de 'id' a 'id_detalle'
+    @Column(name = "id_detalle")
+    @Schema(description = "ID del detalle auto-incrementable")
+    private Long idDetalle;
+
+    @Column(name = "id_producto", nullable = false)
+    @Schema(description = "ID del producto vendido")
+    private Long idProducto;
 
     @Column(nullable = false)
-    private Long idProducto; // Asociado al microservicio de producto
-
-    @Column(nullable = false)
+    @Schema(description = "Cantidad de unidades vendidas")
     private Integer cantidad;
 
-    @Column(nullable = false)
-    private BigDecimal subtotal;
+    @Column(name = "precio_unitario", nullable = false, precision = 12, scale = 2)
+    @Schema(description = "Precio unitario del producto en el momento de la venta")
+    private Integer precioUnitario;
 
-    @Column
-    private Long idDescuento; 
+    @Column(nullable = false)
+    @Schema(description = "Subtotal de este producto en la venta")
+    private Integer subtotal;
 
     @ManyToOne
-    @JoinColumn(name = "idVenta", nullable = false)
+    @JoinColumn(name = "id_venta", nullable = false)
+    @Schema(description = "Venta a la que pertenece este detalle")
     private Venta venta;
 }

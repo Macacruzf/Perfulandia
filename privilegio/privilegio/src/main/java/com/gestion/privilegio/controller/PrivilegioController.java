@@ -2,8 +2,10 @@
 package com.gestion.privilegio.controller;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
-
+import org.springframework.hateoas.CollectionModel;
+import org.springframework.hateoas.EntityModel;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -19,77 +21,110 @@ import com.gestion.privilegio.model.Privilegio;
 import com.gestion.privilegio.service.ModuloService;
 import com.gestion.privilegio.service.PrivilegioService;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.methodOn;
+import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.linkTo;
+
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+
 @RestController
 @RequestMapping("/api/v1/privilegios")
-@CrossOrigin(origins = "*") // Permitir acceso desde otros servicios o frontends
+@CrossOrigin(origins = "*")
+@Tag(name = "Privilegios", description = "Operaciones para gestionar privilegios y módulos")
 public class PrivilegioController {
-
 
     private final PrivilegioService privilegioService;
     private final ModuloService moduloService;
 
-    // Constructor con inyección de dependencias
     public PrivilegioController(PrivilegioService privilegioService, ModuloService moduloService) {
         this.privilegioService = privilegioService;
         this.moduloService = moduloService;
     }
 
-    /**
-     * Lista todos los privilegios registrados en el sistema.
-     * @return lista de privilegios
-     */
+    @Operation(
+        summary = "Listar todos los privilegios",
+        responses = {
+            @ApiResponse(responseCode = "200", description = "Lista de privilegios obtenida exitosamente"),
+            @ApiResponse(responseCode = "500", description = "Error interno del servidor")
+        }
+    )
     @GetMapping
-    public ResponseEntity<List<Privilegio>> listarPrivilegios() {
-        List<Privilegio> lista = privilegioService.listarTodos();
-        return ResponseEntity.ok(lista);
+    public ResponseEntity<CollectionModel<EntityModel<Privilegio>>> listarPrivilegios() {
+        List<EntityModel<Privilegio>> privilegios = privilegioService.listarTodos().stream()
+                .map(this::toPrivilegioModel)
+                .collect(Collectors.toList());
+        return ResponseEntity.ok(CollectionModel.of(privilegios));
     }
 
-    /**
-     * Lista todos los módulos funcionales disponibles para asignación de privilegios.
-     * @return lista de módulos
-     */
+    @Operation(
+        summary = "Listar todos los módulos",
+        responses = {
+            @ApiResponse(responseCode = "200", description = "Lista de módulos obtenida exitosamente"),
+            @ApiResponse(responseCode = "500", description = "Error interno del servidor")
+        }
+    )
     @GetMapping("/modulos")
-    public ResponseEntity<List<Modulo>> listarModulos() {
-        List<Modulo> modulos = moduloService.obtenerTodosLosModulos(); // Se usa el método ya existente
-        return ResponseEntity.ok(modulos);
+    public ResponseEntity<CollectionModel<EntityModel<Modulo>>> listarModulos() {
+        List<EntityModel<Modulo>> modulos = moduloService.obtenerTodosLosModulos().stream()
+                .map(this::toModuloModel)
+                .collect(Collectors.toList());
+        return ResponseEntity.ok(CollectionModel.of(modulos));
     }
 
-    /**
-     * Retorna los módulos a los que un rol tiene acceso.
-     */
+    @Operation(
+        summary = "Obtener módulos asociados a un rol",
+        responses = {
+            @ApiResponse(responseCode = "200", description = "Módulos encontrados para el rol"),
+            @ApiResponse(responseCode = "204", description = "No hay módulos asociados al rol"),
+            @ApiResponse(responseCode = "500", description = "Error interno del servidor")
+        }
+    )
     @GetMapping("/rol/{nombreRol}")
     public ResponseEntity<List<Modulo>> obtenerModulosPorRol(@PathVariable String nombreRol) {
         List<Modulo> modulos = privilegioService.obtenerModulosPorRol(nombreRol.toUpperCase());
-        
         if (modulos.isEmpty()) {
             return ResponseEntity.noContent().build();
         }
-
         return ResponseEntity.ok(modulos);
     }
 
-    /**
-     * Crea y guarda un nuevo privilegio con su respectivo módulo y rol.
-     * @param privilegio objeto de tipo Privilegio
-     * @return privilegio guardado
-     */
+    @Operation(
+        summary = "Guardar un nuevo privilegio",
+        responses = {
+            @ApiResponse(responseCode = "200", description = "Privilegio guardado exitosamente"),
+            @ApiResponse(responseCode = "400", description = "Datos inválidos en la solicitud"),
+            @ApiResponse(responseCode = "500", description = "Error interno del servidor")
+        }
+    )
     @PostMapping
     public ResponseEntity<Privilegio> guardarPrivilegio(@RequestBody Privilegio privilegio) {
         Privilegio guardado = privilegioService.guardar(privilegio);
         return ResponseEntity.ok(guardado);
     }
 
-    /**
-     * Elimina un privilegio por su ID.
-     * @param id ID del privilegio a eliminar
-     * @return respuesta sin contenido
-     */
+    @Operation(
+        summary = "Eliminar un privilegio por ID",
+        responses = {
+            @ApiResponse(responseCode = "204", description = "Privilegio eliminado correctamente"),
+            @ApiResponse(responseCode = "404", description = "Privilegio no encontrado"),
+            @ApiResponse(responseCode = "500", description = "Error interno del servidor")
+        }
+    )
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> eliminarPrivilegio(@PathVariable Long id) {
         privilegioService.eliminar(id);
         return ResponseEntity.noContent().build();
     }
 
-    
-}
+    // Métodos auxiliares para HATEOAS
+    private EntityModel<Privilegio> toPrivilegioModel(Privilegio p) {
+        return EntityModel.of(p,
+            linkTo(methodOn(PrivilegioController.class).listarPrivilegios()).withSelfRel());
+    }
 
+    private EntityModel<Modulo> toModuloModel(Modulo m) {
+        return EntityModel.of(m,
+            linkTo(methodOn(PrivilegioController.class).listarModulos()).withSelfRel());
+    }
+}
